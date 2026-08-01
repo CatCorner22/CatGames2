@@ -86,5 +86,40 @@ export function GameGlyph({ id, className = "size-7" }: { id: GameId; className?
           />
         </svg>
       );
+    case "orion":
+      return (
+        <svg {...common}>
+          <circle cx="12" cy="28" r="4" fill="currentColor" />
+          <circle cx="24" cy="22" r="5" fill="currentColor" />
+          <circle cx="36" cy="16" r="4" fill="currentColor" />
+          <path d="M12 28L24 22L36 16" stroke="currentColor" strokeWidth="1.5" opacity="0.4" />
+          <circle cx="24" cy="22" r="10" fill="currentColor" opacity="0.12" />
+        </svg>
+      );
+    case "eclipse":
+      return (
+        <svg {...common}>
+          <circle cx="24" cy="24" r="16" fill="currentColor" opacity="0.25" />
+          <circle cx="24" cy="24" r="11" fill="#0f1419" stroke="currentColor" strokeWidth="2" />
+          <circle cx="24" cy="24" r="14" stroke="currentColor" strokeWidth="1.5" opacity="0.5" fill="none" />
+        </svg>
+      );
+    case "comet":
+      return (
+        <svg {...common}>
+          <path d="M8 30c8-4 16-10 28-18" stroke="currentColor" strokeWidth="3" strokeLinecap="round" opacity="0.45" />
+          <circle cx="36" cy="12" r="6" fill="currentColor" />
+          <circle cx="36" cy="12" r="3" fill="#0f1419" opacity="0.25" />
+        </svg>
+      );
+    case "nebula":
+      return (
+        <svg {...common}>
+          <circle cx="18" cy="22" r="12" fill="currentColor" opacity="0.35" />
+          <circle cx="30" cy="26" r="10" fill="currentColor" opacity="0.45" />
+          <circle cx="24" cy="18" r="7" fill="currentColor" opacity="0.6" />
+          <circle cx="22" cy="20" r="2.5" fill="currentColor" />
+        </svg>
+      );
   }
 }
