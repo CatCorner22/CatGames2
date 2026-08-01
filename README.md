@@ -61,9 +61,14 @@ Soft motion · non-scary · high-contrast targets · stylus & paw friendly · sh
 - **Soft sounds:** Off by default (optional gentle chimes)  
 - Controls auto-hide so kittens focus on the toy, not the UI  
 
+## Play it
+
+- **GitHub Pages (permanent URL):** enable it once in this repo — Settings → Pages → "Deploy from a branch" → branch `main`, folder `/docs` → Save. The game then lives at `https://catcorner22.github.io/CatGames/`. The playable single-file build is committed at `docs/index.html` (rebuild it with `npm run build:single`).
+- **Any static host (Vercel/Netlify):** import the repo and deploy — zero config.
+
 ## Install on an XP-Pen / Android tablet
 
-1. Open the live KittenPlay URL in **Chrome** or **Edge** on the tablet.  
+1. Open the KittenPlay URL (see **Play it** above) in **Chrome** or **Edge** on the tablet.  
 2. Menu → **Add to Home screen** / **Install app**.  
 3. Launch full-screen from the home icon.  
 4. Lay the tablet flat on a non-slip mat; start on **Calm** + **Auto roam** for new kittens.  

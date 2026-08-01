@@ -70,7 +70,7 @@ function loadSettings(): GameSettings {
   }
 }
 
-function KittenPlayApp() {
+export function KittenPlayApp() {
   const [view, setView] = useState<View>("hub");
   const [returnTo, setReturnTo] = useState<View>("hub");
   const [game, setGame] = useState<GameId>("laser");
