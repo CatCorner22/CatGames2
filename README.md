@@ -17,6 +17,15 @@ Soft motion · non-scary · high-contrast targets · stylus & paw friendly · sh
 | **Pond Fish** | Watch / dab at colorful swimming fish |
 | **Surprise Treats** | Friendly treat icons appear, linger, and fade |
 
+### Space series (for Orion & Eclipse)
+
+| Game | What cats do |
+|------|----------------|
+| **Orion's Belt** | Three linked stars drift together — soft bat targets |
+| **Eclipse Moon** | Dark moon with a gentle glowing corona |
+| **Comet Trail** | A soft comet with a silky tail to chase |
+| **Nebula Dust** | Colorful glowing dust clouds that sparkle on touch |
+
 ## Settings (tablet-friendly)
 
 - **Energy:** Calm · Playful · Zoomies  
