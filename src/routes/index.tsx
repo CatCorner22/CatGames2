@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ArrowLeft,
   Cat,
@@ -85,6 +85,28 @@ export function KittenPlayApp() {
   const [playSettingsOpen, setPlaySettingsOpen] = useState(false);
   // Bumped on every startGame so re-tapping the active chip still resets the round.
   const [playRound, setPlayRound] = useState(0);
+  // Hold-to-exit: a quick tap on the corner button only reveals the controls
+  // (paw-safe), holding it walks the human back to the main screen.
+  const [holdingExit, setHoldingExit] = useState(false);
+  const holdTimer = useRef<number | null>(null);
+
+  const cancelExitHold = useCallback((reveal: boolean) => {
+    if (holdTimer.current !== null) {
+      clearTimeout(holdTimer.current);
+      holdTimer.current = null;
+    }
+    setHoldingExit(false);
+    if (reveal) setChromeHidden(false);
+  }, []);
+
+  const startExitHold = useCallback(() => {
+    setHoldingExit(true);
+    holdTimer.current = window.setTimeout(() => {
+      holdTimer.current = null;
+      setHoldingExit(false);
+      setView("hub");
+    }, 700);
+  }, []);
 
   useEffect(() => {
     setSettings(loadSettings());
@@ -179,14 +201,34 @@ export function KittenPlayApp() {
           </div>
         )}
 
-        {/* Corner-only reveal target: a full-width strip swallowed paw taps on
-            games whose targets cross the top edge (e.g. Star Shower). */}
-        <button
-          type="button"
-          aria-label="Show controls"
-          className="absolute left-0 top-0 h-14 w-20 z-20"
-          onClick={() => setChromeHidden(false)}
-        />
+        {/* Always-visible back button for the human: tap shows the controls,
+            press-and-hold goes back to the main screen. Corner-only so it
+            doesn't swallow paw taps on games whose targets cross the top edge. */}
+        {chromeHidden && (
+          <button
+            type="button"
+            aria-label="Show controls — hold to go back to all games"
+            onPointerDown={startExitHold}
+            onPointerUp={() => cancelExitHold(true)}
+            onPointerLeave={() => cancelExitHold(false)}
+            onPointerCancel={() => cancelExitHold(false)}
+            className={cn(
+              "absolute left-3 top-3 z-20 rounded-full border border-border bg-surface/50 backdrop-blur p-2.5 min-h-11 min-w-11 transition-opacity",
+              holdingExit ? "opacity-100" : "opacity-55",
+            )}
+          >
+            <ArrowLeft className="size-4" />
+            {holdingExit && (
+              <svg className="absolute inset-0 size-full -rotate-90 text-primary" viewBox="0 0 44 44" aria-hidden>
+                <circle
+                  cx="22" cy="22" r="19.5" fill="none" stroke="currentColor" strokeWidth="2.5"
+                  strokeLinecap="round" strokeDasharray="122.5" strokeDashoffset="122.5"
+                  className="animate-[holdfill_0.7s_linear_forwards]"
+                />
+              </svg>
+            )}
+          </button>
+        )}
 
         <header
           className={cn(

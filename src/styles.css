@@ -71,3 +71,9 @@
       max(0.75rem, env(safe-area-inset-left));
   }
 }
+
+@keyframes holdfill {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
