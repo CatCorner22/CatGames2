@@ -1,6 +1,6 @@
 import type { GameId, GameSettings } from "./types";
 import { sizeMultiplier, speedMultiplier } from "./types";
-import { playPop, playSoftChime, playTap } from "./audio";
+import { playChirp, playPop, playScurry, playSoftChime, playTap, playTrill } from "./audio";
 
 export interface PointerState { x: number; y: number; down: boolean; active: boolean; }
 interface Particle { x: number; y: number; vx: number; vy: number; life: number; max: number; color: string; size: number; }
@@ -33,7 +33,7 @@ const CAT_EYES: [number, number][] = [
 
 const SPACE_BG_GAMES: GameId[] = [
   "orion", "eclipse", "comet", "nebula",
-  "starshower", "saturn", "aurora", "moonmoth", "constellation", "lunabounce",
+  "starshower", "saturn", "aurora", "moonmoth", "constellation", "lunabounce", "ribbon",
 ];
 
 const GAME_BGS: Record<string, [string, string]> = {
@@ -43,6 +43,7 @@ const GAME_BGS: Record<string, [string, string]> = {
   orion: ["#050814", "#0c1228"], comet: ["#04060f", "#0a1424"], eclipse: ["#06050c", "#12101c"], nebula: ["#0a0614", "#1a0f28"],
   starshower: ["#050b1e", "#101b38"], saturn: ["#0b0a1a", "#191430"], aurora: ["#04101c", "#0a2030"],
   moonmoth: ["#0a0a18", "#141228"], constellation: ["#060a1c", "#0e1630"], lunabounce: ["#0b0f1d", "#161d33"],
+  ribbon: ["#0a071c", "#1a1035"], walle: ["#0e1409", "#1d2a13"],
 };
 
 export class KittenGameEngine {
@@ -65,6 +66,10 @@ export class KittenGameEngine {
   private constJx = 0; private constJy = 0; private lastAdvance = 0;
   // Phoenix's Rainbow Bridge state
   private phxSpawnT = 0; private phxTumbleT = 0; private phxSide = 1; private emberT = 0;
+  // Stardust Ribbon: trailing segment chain behind the head (`main`)
+  private ribbon: { x: number; y: number }[] = [];
+  // Walle's Chirp Chase: time since the critter last relocated
+  private walleMoveT = 0;
 
   constructor(canvas: HTMLCanvasElement, settings: GameSettings, onScore?: (n: number) => void) {
     this.canvas = canvas;
@@ -108,6 +113,10 @@ export class KittenGameEngine {
       for (const e of this.entities) {
         e.x = clamp(e.x, -80, this.w + 80);
         e.y = clamp(e.y, -80, this.h + 80);
+      }
+      for (const seg of this.ribbon) {
+        seg.x = clamp(seg.x, -40, this.w + 40);
+        seg.y = clamp(seg.y, -40, this.h + 40);
       }
       this.wanderX = clamp(this.wanderX, 50, Math.max(50, this.w - 50));
       this.wanderY = clamp(this.wanderY, 50, Math.max(50, this.h - 50));
@@ -218,6 +227,13 @@ export class KittenGameEngine {
       }
     } else if (this.game === "constellation") {
       this.main = null;
+    } else if (this.game === "ribbon") {
+      this.main = { x: cx, y: cy * 0.6, vx: 30, vy: 10, r: 12 * z, phase: 0, hue: 300, kind: "ribbonhead", angle: 0 };
+      this.ribbon = Array.from({ length: 24 }, (_, i) => ({ x: cx, y: cy * 0.6 + (i + 1) * 11 * z }));
+    } else if (this.game === "walle") {
+      this.main = null;
+      this.walleMoveT = 0;
+      this.spawnCritter();
     } else if (this.game === "phoenix") {
       this.main = { x: cx, y: this.h * 0.3, vx: 0, vy: 0, r: 26 * z, phase: 0, hue: 28, kind: "phoenix", angle: 0, timer: 0 };
       this.spawnGoodie(); this.spawnGoodie();
@@ -258,6 +274,26 @@ export class KittenGameEngine {
       hue: nip ? 100 : rand(28, 42), kind: nip ? "nip" : "kibble",
       life: 0, maxLife: rand(4.2, 6.5) / Math.max(0.8, this.sm()), scale: 0, state: "in",
     });
+  }
+
+  /** Stereo pan (-1..1) for an x position — how Walle "sees" the screen. */
+  private panOf(x: number) { return clamp((x / Math.max(1, this.w)) * 2 - 1, -1, 1); }
+
+  private spawnCritter() {
+    const z = this.zm();
+    this.entities.push({
+      x: rand(100, Math.max(140, this.w - 100)), y: rand(100, Math.max(140, this.h - 100)),
+      vx: 0, vy: 0, r: 15 * z, phase: rand(0, Math.PI * 2), hue: 90, kind: "critter",
+      life: 0, timer: 0.6,
+    });
+  }
+
+  private relocateCritter(c: Entity) {
+    const from = this.panOf(c.x);
+    c.x = rand(100, Math.max(140, this.w - 100));
+    c.y = rand(100, Math.max(140, this.h - 100));
+    c.life = 0; c.timer = 0.55; this.walleMoveT = 0;
+    playScurry(from, this.panOf(c.x));
   }
 
   private spawnTumbleweed() {
@@ -571,6 +607,70 @@ export class KittenGameEngine {
         }
       }
     }
+    if (this.main && this.game === "ribbon") {
+      const m = this.main;
+      // Head swims toward the target with a sinuous wiggle, like a wand toy being drawn
+      const wig = Math.sin(this.time * 5.2) * 60 * sm;
+      const na = Math.atan2(t.y - m.y, t.x - m.x) + Math.PI / 2;
+      m.vx += ((t.x - m.x) * 2.6 + Math.cos(na) * wig) * sm * dt;
+      m.vy += ((t.y - m.y) * 2.6 + Math.sin(na) * wig) * sm * dt;
+      m.vx *= 0.92; m.vy *= 0.92;
+      if (Math.random() < 0.5 * sm * dt) { m.vx += rand(-150, 150) * sm; m.vy += rand(-150, 150) * sm; }
+      m.x = clamp(m.x + m.vx * dt, m.r, this.w - m.r);
+      m.y = clamp(m.y + m.vy * dt, m.r, this.h - m.r);
+      m.phase += dt * 6;
+      // Chain constraint: each segment trails the one ahead at fixed spacing
+      const spacing = 11 * this.zm();
+      let px = m.x, py = m.y;
+      for (const seg of this.ribbon) {
+        const d = dist(px, py, seg.x, seg.y) || 1;
+        if (d > spacing) {
+          const f = (d - spacing) / d;
+          seg.x += (px - seg.x) * f;
+          seg.y += (py - seg.y) * f;
+        }
+        px = seg.x; py = seg.y;
+      }
+      if (this.pointer.down) {
+        const tip = this.ribbon[this.ribbon.length - 1]!;
+        const hitR = Math.max(30, 26 * this.zm());
+        if (dist(this.pointer.x, this.pointer.y, tip.x, tip.y) < hitR * 1.7 &&
+            this.maybeScore(tip.x, tip.y, "#f0abfc", 300)) {
+          // Playful flick: the ribbon darts away like a teased wand toy
+          m.vx += rand(-320, 320); m.vy += rand(-280, -140);
+        }
+      }
+    }
+
+    if (this.game === "walle") {
+      const c = this.entities[0];
+      if (c) {
+        c.phase += dt * 5;
+        c.life = (c.life ?? 0) + dt;
+        c.timer = (c.timer ?? 0.6) - dt;
+        if (c.timer <= 0) {
+          // Chirp from where the critter sits: pan follows x, pitch rises with height
+          c.timer = rand(1.3, 2.1) / Math.max(0.7, sm);
+          c.life = 0;
+          playChirp(this.panOf(c.x), 1.25 - (c.y / Math.max(1, this.h)) * 0.45);
+        }
+        this.walleMoveT += dt;
+        if (this.walleMoveT > (this.settings.control === "auto" ? 7 : 11) / sm) this.relocateCritter(c);
+        if (this.pointer.down) {
+          // Very forgiving target — precision isn't the point, tracking by ear is
+          const hitR = Math.max(85, 70 * this.zm());
+          const now = performance.now();
+          if (dist(this.pointer.x, this.pointer.y, c.x, c.y) < hitR && now - this.lastPop > 400) {
+            this.lastPop = now;
+            this.burst(c.x, c.y, "#fcd34d", 14);
+            playTrill(this.panOf(c.x));
+            this.score += 1; this.onScore?.(this.score);
+            this.relocateCritter(c);
+          }
+        }
+      }
+    }
+
     if (this.game === "phoenix" && this.main) {
       const m = this.main;
       // The phoenix soars: a slow figure-eight in auto mode, or follows the finger.
@@ -750,7 +850,12 @@ export class KittenGameEngine {
     ctx.fillRect(0, h * 0.78, w, h * 0.22);
   }
 
-  private drawPhoenixBird(m: Entity) {
+  /**
+   * Phoenix himself — drawn from his photo: a gray-brown mackerel tabby with
+   * big green-hazel eyes, a pink nose, forehead stripes, a freckled muzzle, and
+   * long white whiskers — soaring on soft flame wings under the rainbow bridge.
+   */
+  private drawPhoenixCat(m: Entity) {
     const ctx = this.ctx;
     const glow = 0.45 + ((m.timer ?? 0) > 0 ? 0.35 : 0) + Math.sin(m.phase * 0.7) * 0.08;
     const rg = ctx.createRadialGradient(m.x, m.y, 0, m.x, m.y, m.r * 3.4);
@@ -759,51 +864,250 @@ export class KittenGameEngine {
     ctx.fillStyle = rg; ctx.beginPath(); ctx.arc(m.x, m.y, m.r * 3.4, 0, Math.PI * 2); ctx.fill();
     ctx.save();
     ctx.translate(m.x, m.y);
-    ctx.rotate(m.angle ?? 0);
+    // Face travel direction (with a deadband so he doesn't flip-flop), bank gently with climb/dive
+    if (m.vx > 20) m.scale = 1; else if (m.vx < -20) m.scale = -1;
+    const flip = m.scale ?? 1;
+    ctx.scale(flip, 1);
+    ctx.rotate(clamp((m.vy ?? 0) / 600, -0.3, 0.3) * flip);
     const r = m.r;
-    // Tail: three trailing flame feathers
-    const tailHues = ["#ef4444", "#fb923c", "#facc15"];
-    for (let i = 0; i < 3; i++) {
-      const spread = (i - 1) * 0.5;
-      const wave = Math.sin(m.phase * 1.4 + i) * r * 0.24;
-      ctx.strokeStyle = tailHues[i]!;
-      ctx.globalAlpha = 0.7;
-      ctx.lineWidth = r * 0.22;
-      ctx.lineCap = "round";
+    // Flame wings behind the body (soft flap)
+    const flap = Math.sin(m.phase) * 0.5;
+    for (const side of [-1, 1] as const) {
+      const wg = ctx.createLinearGradient(0, 0, -r * 1.6, side * r * 1.4);
+      wg.addColorStop(0, "rgba(251,146,60,0.95)"); wg.addColorStop(1, "rgba(250,204,21,0.3)");
+      ctx.fillStyle = wg;
       ctx.beginPath();
-      ctx.moveTo(-r * 0.7, 0);
-      ctx.quadraticCurveTo(-r * 1.8, spread * r + wave, -r * 2.7, spread * r * 1.7 + wave);
+      ctx.ellipse(-r * 0.25, side * (r * 0.6 + flap * r * 0.45), r * 1.25, r * 0.4, side * (0.55 + flap * 0.35), 0, Math.PI * 2);
+      ctx.fill();
+    }
+    // Striped tabby tail streaming behind, tipped with flame
+    const tw = Math.sin(m.phase * 1.3) * r * 0.3;
+    ctx.lineCap = "round";
+    ctx.strokeStyle = "#4a4238"; ctx.lineWidth = r * 0.3;
+    ctx.beginPath(); ctx.moveTo(-r * 0.85, 0); ctx.quadraticCurveTo(-r * 1.9, tw, -r * 2.6, tw * 1.6); ctx.stroke();
+    ctx.strokeStyle = "#26211b"; ctx.setLineDash([r * 0.2, r * 0.24]);
+    ctx.beginPath(); ctx.moveTo(-r * 0.85, 0); ctx.quadraticCurveTo(-r * 1.9, tw, -r * 2.6, tw * 1.6); ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.strokeStyle = "rgba(251,146,60,0.85)"; ctx.lineWidth = r * 0.16;
+    ctx.beginPath(); ctx.moveTo(-r * 2.55, tw * 1.6); ctx.quadraticCurveTo(-r * 2.9, tw * 1.6 - r * 0.3, -r * 3.1, tw * 1.6 + r * 0.1); ctx.stroke();
+    // Body — dark charcoal tabby loaf, mid-soar
+    const body = ctx.createLinearGradient(0, -r * 0.6, 0, r * 0.6);
+    body.addColorStop(0, "#5a5240"); body.addColorStop(0.5, "#3a352c"); body.addColorStop(1, "#2a251f");
+    ctx.fillStyle = body;
+    ctx.beginPath(); ctx.ellipse(-r * 0.05, 0, r * 1.05, r * 0.6, 0, 0, Math.PI * 2); ctx.fill();
+    // Mackerel stripes with pale silvery ticking between them
+    ctx.strokeStyle = "rgba(18,15,11,0.75)"; ctx.lineWidth = r * 0.09;
+    for (let i = 0; i < 5; i++) {
+      const bx = -r * 0.78 + i * r * 0.32;
+      ctx.beginPath();
+      ctx.moveTo(bx, -r * 0.5);
+      ctx.quadraticCurveTo(bx + r * 0.12, 0, bx, r * 0.52);
       ctx.stroke();
     }
-    ctx.globalAlpha = 1;
-    // Wings (soft flap)
-    const flap = Math.sin(m.phase) * 0.5;
-    ctx.fillStyle = "rgba(251,146,60,0.92)";
+    ctx.strokeStyle = "rgba(196,178,142,0.4)"; ctx.lineWidth = r * 0.035;
+    for (let i = 0; i < 4; i++) {
+      const bx = -r * 0.62 + i * r * 0.32;
+      ctx.beginPath();
+      ctx.moveTo(bx, -r * 0.42);
+      ctx.quadraticCurveTo(bx + r * 0.1, 0, bx, r * 0.45);
+      ctx.stroke();
+    }
+    // Front paws reaching into the flight
+    ctx.fillStyle = "#3a352c";
+    ctx.beginPath(); ctx.ellipse(r * 0.74, r * 0.32, r * 0.3, r * 0.14, 0.15, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(r * 0.62, r * 0.5, r * 0.28, r * 0.13, 0.2, 0, Math.PI * 2); ctx.fill();
+    // Head
+    const hx = r * 0.95; const hy = -r * 0.18; const hr = r * 0.54;
+    // Wide-set ears with warm pink centers
+    for (const side of [-1, 1] as const) {
+      ctx.save();
+      ctx.translate(hx + side * hr * 0.62, hy - hr * 0.7);
+      ctx.rotate(side * 0.32);
+      ctx.fillStyle = "#4a4238";
+      ctx.beginPath(); ctx.moveTo(-hr * 0.34, hr * 0.3); ctx.lineTo(0, -hr * 0.62); ctx.lineTo(hr * 0.34, hr * 0.3); ctx.closePath(); ctx.fill();
+      ctx.fillStyle = "#c99a86";
+      ctx.beginPath(); ctx.moveTo(-hr * 0.17, hr * 0.2); ctx.lineTo(0, -hr * 0.36); ctx.lineTo(hr * 0.17, hr * 0.2); ctx.closePath(); ctx.fill();
+      ctx.restore();
+    }
+    // Face
+    const fgrad = ctx.createRadialGradient(hx, hy, hr * 0.2, hx, hy, hr);
+    fgrad.addColorStop(0, "#6b6250"); fgrad.addColorStop(1, "#453e33");
+    ctx.fillStyle = fgrad;
+    ctx.beginPath(); ctx.arc(hx, hy, hr, 0, Math.PI * 2); ctx.fill();
+    // The tabby 'M' — parallel forehead stripes from his photo
+    ctx.strokeStyle = "rgba(18,15,11,0.8)"; ctx.lineWidth = hr * 0.09; ctx.lineCap = "round";
+    for (let i = -2; i <= 2; i++) {
+      ctx.beginPath();
+      ctx.moveTo(hx + i * hr * 0.18, hy - hr * 0.92);
+      ctx.quadraticCurveTo(hx + i * hr * 0.15, hy - hr * 0.6, hx + i * hr * 0.22, hy - hr * 0.35);
+      ctx.stroke();
+    }
+    // Pale muzzle
+    ctx.fillStyle = "#8d8471";
+    ctx.beginPath(); ctx.ellipse(hx + hr * 0.14, hy + hr * 0.38, hr * 0.42, hr * 0.3, 0, 0, Math.PI * 2); ctx.fill();
+    // Big green-hazel eyes, dark-lined, with wide dark pupils and a glint
+    for (const side of [-1, 1] as const) {
+      const ex = hx + side * hr * 0.32 + hr * 0.05; const ey = hy - hr * 0.06;
+      ctx.strokeStyle = "#14100c"; ctx.lineWidth = hr * 0.055;
+      ctx.fillStyle = "#96ad80";
+      ctx.beginPath(); ctx.ellipse(ex, ey, hr * 0.21, hr * 0.24, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = "#c2d4a4";
+      ctx.beginPath(); ctx.ellipse(ex, ey + hr * 0.05, hr * 0.15, hr * 0.16, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = "#0d0b08";
+      ctx.beginPath(); ctx.ellipse(ex, ey, hr * 0.1, hr * 0.16, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = "rgba(255,255,255,0.85)";
+      ctx.beginPath(); ctx.arc(ex - hr * 0.05, ey - hr * 0.08, hr * 0.045, 0, Math.PI * 2); ctx.fill();
+    }
+    // Pink nose with a dark outline, philtrum, and a soft smile
+    ctx.fillStyle = "#d9848c"; ctx.strokeStyle = "#14100c"; ctx.lineWidth = hr * 0.035;
     ctx.beginPath();
-    ctx.ellipse(-r * 0.1, -r * 0.55 - flap * r * 0.5, r * 1.15, r * 0.42, -0.5 - flap * 0.4, 0, Math.PI * 2);
-    ctx.fill();
+    ctx.moveTo(hx + hr * 0.1 - hr * 0.09, hy + hr * 0.27);
+    ctx.lineTo(hx + hr * 0.1 + hr * 0.09, hy + hr * 0.27);
+    ctx.lineTo(hx + hr * 0.1, hy + hr * 0.4);
+    ctx.closePath(); ctx.fill(); ctx.stroke();
+    ctx.strokeStyle = "rgba(18,15,11,0.6)"; ctx.lineWidth = hr * 0.04;
+    ctx.beginPath(); ctx.moveTo(hx + hr * 0.1, hy + hr * 0.4); ctx.lineTo(hx + hr * 0.1, hy + hr * 0.48); ctx.stroke();
+    ctx.beginPath(); ctx.arc(hx + hr * 0.0, hy + hr * 0.5, hr * 0.08, Math.PI * 1.9, Math.PI * 0.7); ctx.stroke();
+    ctx.beginPath(); ctx.arc(hx + hr * 0.2, hy + hr * 0.5, hr * 0.08, Math.PI * 0.3, Math.PI * 1.1, true); ctx.stroke();
+    // Freckled muzzle — his little whisker-spot dots
+    ctx.fillStyle = "rgba(18,15,11,0.7)";
+    for (const [fx2, fy2] of [[-0.12, 0.48], [0.0, 0.55], [0.3, 0.5], [-0.02, 0.42], [0.24, 0.4]] as const) {
+      ctx.beginPath(); ctx.arc(hx + fx2 * hr, hy + fy2 * hr, hr * 0.026, 0, Math.PI * 2); ctx.fill();
+    }
+    // Long white whiskers sweeping past his cheeks
+    ctx.strokeStyle = "rgba(245,245,240,0.85)"; ctx.lineWidth = hr * 0.028;
+    for (const side of [-1, 1] as const) {
+      for (let i = 0; i < 3; i++) {
+        ctx.beginPath();
+        ctx.moveTo(hx + hr * 0.12 + side * hr * 0.12, hy + hr * (0.3 + i * 0.08));
+        ctx.quadraticCurveTo(
+          hx + side * hr * (0.9 + i * 0.1), hy + hr * (0.22 + i * 0.12),
+          hx + side * hr * (1.5 + i * 0.12), hy + hr * (0.05 + i * 0.24),
+        );
+        ctx.stroke();
+      }
+    }
+    ctx.restore();
+  }
+
+  /** The chirping cricket Walle hunts by ear. */
+  private drawCritter(e: Entity) {
+    const ctx = this.ctx;
+    const rg = ctx.createRadialGradient(e.x, e.y, 1, e.x, e.y, e.r * 2.6);
+    rg.addColorStop(0, "rgba(190,242,100,0.32)"); rg.addColorStop(1, "rgba(190,242,100,0)");
+    ctx.fillStyle = rg; ctx.beginPath(); ctx.arc(e.x, e.y, e.r * 2.6, 0, Math.PI * 2); ctx.fill();
+    ctx.save();
+    ctx.translate(e.x, e.y + Math.sin(e.phase) * e.r * 0.12);
+    // Body + head
+    ctx.fillStyle = "#a3e635";
+    ctx.beginPath(); ctx.ellipse(0, 0, e.r, e.r * 0.62, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = "#84cc16";
+    ctx.beginPath(); ctx.arc(e.r * 0.85, -e.r * 0.15, e.r * 0.42, 0, Math.PI * 2); ctx.fill();
+    // Wing lifts while it sings
+    if ((e.life ?? 9) < 0.35) {
+      ctx.strokeStyle = "rgba(253,224,71,0.9)";
+      ctx.lineWidth = e.r * 0.16; ctx.lineCap = "round";
+      ctx.beginPath(); ctx.moveTo(-e.r * 0.5, -e.r * 0.5); ctx.quadraticCurveTo(0, -e.r * 1.1, e.r * 0.4, -e.r * 0.55); ctx.stroke();
+    }
+    // Legs, eye, antenna
+    ctx.strokeStyle = "#65a30d"; ctx.lineWidth = e.r * 0.12; ctx.lineCap = "round";
+    ctx.beginPath(); ctx.moveTo(-e.r * 0.2, e.r * 0.4); ctx.lineTo(-e.r * 0.8, e.r * 0.95); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(e.r * 0.25, e.r * 0.45); ctx.lineTo(e.r * 0.7, e.r * 0.95); ctx.stroke();
+    ctx.fillStyle = "#1a2e05";
+    ctx.beginPath(); ctx.arc(e.r * 1.0, -e.r * 0.22, e.r * 0.09, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = "#84cc16"; ctx.lineWidth = e.r * 0.09;
+    ctx.beginPath(); ctx.moveTo(e.r * 1.05, -e.r * 0.5); ctx.quadraticCurveTo(e.r * 1.5, -e.r * 1.05, e.r * 1.9, -e.r * 0.95); ctx.stroke();
+    ctx.restore();
+  }
+
+  /**
+   * Walle himself rests in the bottom corner — white face and chest, gray-brown
+   * tabby saddle and crown, peacefully closed eyes. His ears swivel toward the
+   * critter and perk up on every chirp, the way a blind cat really listens.
+   */
+  private drawWalleCat(c: Entity | null) {
+    const ctx = this.ctx;
+    const s = Math.min(this.w, this.h) * 0.13;
+    const x = s * 1.25; const y = this.h - s * 0.85;
+    const toward = c ? clamp((c.x - x) / this.w, -1, 1) : 0;
+    const perk = c && (c.life ?? 9) < 0.5 ? 1 - (c.life ?? 0) / 0.5 : 0;
+    ctx.save();
+    ctx.translate(x, y);
+    // Body loaf — white chest and front
+    ctx.fillStyle = "#f2ecdf";
+    ctx.beginPath(); ctx.ellipse(s * 0.3, s * 0.5, s * 1.2, s * 0.72, 0, 0, Math.PI * 2); ctx.fill();
+    // Gray-brown tabby saddle over the back
+    ctx.fillStyle = "#8a7a62";
+    ctx.beginPath(); ctx.ellipse(s * 0.8, s * 0.22, s * 0.82, s * 0.42, -0.22, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = "rgba(74,62,48,0.55)"; ctx.lineWidth = s * 0.06; ctx.lineCap = "round";
+    for (let i = 0; i < 4; i++) {
+      ctx.beginPath();
+      ctx.moveTo(s * (0.45 + i * 0.24), -s * 0.05);
+      ctx.quadraticCurveTo(s * (0.55 + i * 0.24), s * 0.25, s * (0.42 + i * 0.24), s * 0.5);
+      ctx.stroke();
+    }
+    // Tail curled around the front
+    ctx.strokeStyle = "#8a7a62"; ctx.lineWidth = s * 0.22;
+    ctx.beginPath(); ctx.moveTo(s * 1.3, s * 0.75); ctx.quadraticCurveTo(s * 0.7, s * 1.15, -s * 0.1, s * 1.0); ctx.stroke();
+    const hx = -s * 0.45; const hy = -s * 0.25;
+    // Ears — swivel toward the chirp, perk taller when it sounds
+    const earTilt = toward * 0.35;
+    const earH = 1 + perk * 0.22;
+    for (const side of [-1, 1] as const) {
+      ctx.save();
+      ctx.translate(hx + side * s * 0.5, hy - s * 0.48);
+      ctx.rotate(side * 0.18 + earTilt);
+      ctx.fillStyle = "#9b8a70";
+      ctx.beginPath();
+      ctx.moveTo(-s * 0.26, s * 0.18); ctx.lineTo(0, -s * 0.6 * earH); ctx.lineTo(s * 0.26, s * 0.18);
+      ctx.closePath(); ctx.fill();
+      ctx.fillStyle = "#e0aa9c";
+      ctx.beginPath();
+      ctx.moveTo(-s * 0.13, s * 0.1); ctx.lineTo(0, -s * 0.38 * earH); ctx.lineTo(s * 0.13, s * 0.1);
+      ctx.closePath(); ctx.fill();
+      ctx.restore();
+    }
+    // Tabby crown between the ears, white face below
+    ctx.fillStyle = "#9b8a70";
+    ctx.beginPath(); ctx.ellipse(hx, hy - s * 0.48, s * 0.56, s * 0.32, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = "#f7f2e7";
+    ctx.beginPath(); ctx.arc(hx, hy, s * 0.62, 0, Math.PI * 2); ctx.fill();
+    // Crown stripes reaching down the forehead
+    ctx.strokeStyle = "rgba(94,80,62,0.7)"; ctx.lineWidth = s * 0.05;
+    for (let i = -1; i <= 1; i++) {
+      ctx.beginPath();
+      ctx.moveTo(hx + i * s * 0.17, hy - s * 0.72);
+      ctx.lineTo(hx + i * s * 0.13, hy - s * 0.42);
+      ctx.stroke();
+    }
+    // Peaceful closed eyes — gentle healed lids, always at rest
+    ctx.strokeStyle = "#6b5d49"; ctx.lineWidth = s * 0.055; ctx.lineCap = "round";
+    ctx.beginPath(); ctx.arc(hx - s * 0.24, hy - s * 0.1, s * 0.14, Math.PI * 0.15, Math.PI * 0.85); ctx.stroke();
+    ctx.beginPath(); ctx.arc(hx + s * 0.24, hy - s * 0.1, s * 0.14, Math.PI * 0.15, Math.PI * 0.85); ctx.stroke();
+    // Pink nose, mouth, little brown chin spot
+    ctx.fillStyle = "#e8a0a8";
     ctx.beginPath();
-    ctx.ellipse(-r * 0.1, r * 0.55 + flap * r * 0.5, r * 1.15, r * 0.42, 0.5 + flap * 0.4, 0, Math.PI * 2);
-    ctx.fill();
-    // Body
-    const body = ctx.createLinearGradient(-r, 0, r, 0);
-    body.addColorStop(0, "#f97316"); body.addColorStop(1, "#fbbf24");
-    ctx.fillStyle = body;
-    ctx.beginPath(); ctx.ellipse(0, 0, r, r * 0.55, 0, 0, Math.PI * 2); ctx.fill();
-    // Head, beak, crest
-    ctx.fillStyle = "#fbbf24";
-    ctx.beginPath(); ctx.arc(r * 0.95, -r * 0.1, r * 0.34, 0, Math.PI * 2); ctx.fill();
-    ctx.fillStyle = "#fde68a";
-    ctx.beginPath();
-    ctx.moveTo(r * 1.26, -r * 0.12); ctx.lineTo(r * 1.5, -r * 0.02); ctx.lineTo(r * 1.24, r * 0.08);
+    ctx.moveTo(hx - s * 0.07, hy + s * 0.14); ctx.lineTo(hx + s * 0.07, hy + s * 0.14); ctx.lineTo(hx, hy + s * 0.24);
     ctx.closePath(); ctx.fill();
-    ctx.strokeStyle = "#facc15"; ctx.lineWidth = r * 0.1; ctx.lineCap = "round";
-    ctx.beginPath();
-    ctx.moveTo(r * 0.95, -r * 0.4); ctx.quadraticCurveTo(r * 0.8, -r * 0.75, r * 0.6, -r * 0.62);
-    ctx.stroke();
-    // Eye
-    ctx.fillStyle = "#431407";
-    ctx.beginPath(); ctx.arc(r * 1.04, -r * 0.16, r * 0.06, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = "rgba(107,93,73,0.6)"; ctx.lineWidth = s * 0.035;
+    ctx.beginPath(); ctx.moveTo(hx, hy + s * 0.24); ctx.lineTo(hx, hy + s * 0.32); ctx.stroke();
+    ctx.beginPath(); ctx.arc(hx - s * 0.09, hy + s * 0.34, s * 0.09, Math.PI * 1.15, Math.PI * 1.95, true); ctx.stroke();
+    ctx.beginPath(); ctx.arc(hx + s * 0.09, hy + s * 0.34, s * 0.09, Math.PI * 1.05, Math.PI * 1.85, true); ctx.stroke();
+    ctx.fillStyle = "#a9825e";
+    ctx.beginPath(); ctx.arc(hx - s * 0.06, hy + s * 0.44, s * 0.055, 0, Math.PI * 2); ctx.fill();
+    // Whiskers
+    ctx.strokeStyle = "rgba(250,247,240,0.8)"; ctx.lineWidth = s * 0.025;
+    for (const side of [-1, 1] as const) {
+      for (let i = 0; i < 3; i++) {
+        ctx.beginPath();
+        ctx.moveTo(hx + side * s * 0.18, hy + s * (0.12 + i * 0.07));
+        ctx.quadraticCurveTo(
+          hx + side * s * 0.7, hy + s * (0.05 + i * 0.12),
+          hx + side * s * 1.05, hy + s * (-0.05 + i * 0.2),
+        );
+        ctx.stroke();
+      }
+    }
     ctx.restore();
   }
 
@@ -1101,7 +1405,47 @@ export class KittenGameEngine {
         this.drawGoodie(e);
       }
     }
-    if (this.main && this.game === "phoenix") this.drawPhoenixBird(this.main);
+    if (this.main && this.game === "ribbon") {
+      const m = this.main;
+      const pts = [{ x: m.x, y: m.y }, ...this.ribbon];
+      // Two passes: wide soft glow underneath, bright silky core on top
+      for (const [wMul, alpha] of [[2.6, 0.14], [1, 0.85]] as const) {
+        for (let i = 1; i < pts.length; i++) {
+          const p0 = pts[i - 1]!; const p1 = pts[i]!;
+          const f = i / pts.length;
+          const hue = 265 + f * 70; // violet at the head -> pink at the tassel
+          ctx.strokeStyle = `hsla(${hue}, 85%, ${62 + f * 12}%, ${alpha * (1 - f * 0.3)})`;
+          ctx.lineWidth = Math.max(1.5, (10 - f * 7) * this.zm()) * wMul;
+          ctx.lineCap = "round";
+          ctx.beginPath(); ctx.moveTo(p0.x, p0.y); ctx.lineTo(p1.x, p1.y); ctx.stroke();
+        }
+      }
+      const tip = this.ribbon[this.ribbon.length - 1]!;
+      const pulse = 1 + Math.sin(m.phase) * 0.15;
+      this.drawGlowStar(tip.x, tip.y, 10 * this.zm() * pulse, "#fdf4ff", "rgba(240,171,252,0.4)");
+    }
+
+    if (this.game === "walle") {
+      const c = this.entities[0];
+      if (c) {
+        // Visible echo of each chirp — ripple rings for sighted playmates
+        const since = c.life ?? 99;
+        for (let k = 0; k < 3; k++) {
+          const tt = since - k * 0.14;
+          if (tt >= 0 && tt < 1.1) {
+            ctx.globalAlpha = (1 - tt / 1.1) * 0.34;
+            ctx.strokeStyle = "#bef264";
+            ctx.lineWidth = 2.2;
+            ctx.beginPath(); ctx.arc(c.x, c.y, c.r * 1.4 + tt * 150, 0, Math.PI * 2); ctx.stroke();
+          }
+        }
+        ctx.globalAlpha = 1;
+        this.drawCritter(c);
+      }
+      this.drawWalleCat(c ?? null);
+    }
+
+    if (this.main && this.game === "phoenix") this.drawPhoenixCat(this.main);
     for (const p of this.particles) {
       const a = clamp(p.life / p.max, 0, 1);
       ctx.globalAlpha = a; ctx.fillStyle = p.color;

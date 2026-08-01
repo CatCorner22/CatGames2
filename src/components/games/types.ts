@@ -17,12 +17,14 @@ export type GameId =
   | "moonmoth"
   | "constellation"
   | "lunabounce"
+  | "ribbon"
+  | "walle"
   | "phoenix";
 
 export type SpeedMode = "calm" | "playful" | "zoomies";
 export type SizeMode = "small" | "medium" | "large";
 export type ControlMode = "auto" | "follow" | "mixed";
-export type GameSeries = "classic" | "space" | "memorial";
+export type GameSeries = "classic" | "space" | "family" | "memorial";
 
 export interface GameSettings {
   speed: SpeedMode;
@@ -204,6 +206,25 @@ export const GAME_CATALOG: GameMeta[] = [
     accent: "#e2e8f0",
     icon: "lunabounce",
     series: "space",
+  },
+  {
+    id: "ribbon",
+    name: "Stardust Ribbon",
+    tagline: "Wand-toy magic",
+    blurb: "A silky ribbon of starlight swims through the sky. Bat the glowing tassel — or drag a stylus and play wand-toy together.",
+    accent: "#f0abfc",
+    icon: "ribbon",
+    series: "space",
+  },
+  {
+    id: "walle",
+    name: "Walle's Chirp Chase",
+    tagline: "Play by ear 💙",
+    blurb:
+      "A friendly cricket sings somewhere on screen, and its chirp comes from that side of the speakers — so Walle, blind and brave, can hunt it entirely by ear. Chirps stay on in this game even when other sounds are off, and the whole area around the critter counts as a catch.",
+    accent: "#a3e635",
+    icon: "walle",
+    series: "family",
   },
   {
     id: "phoenix",

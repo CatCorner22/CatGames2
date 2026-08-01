@@ -31,12 +31,23 @@ Soft motion · non-scary · high-contrast targets · stylus & paw friendly · sh
 | **Moon Moths** | Glowing moths flutter around a crescent moon |
 | **Kitten Constellation** | Tap the twinkling star to draw a kitten across the sky |
 | **Luna Bounce** | A little moon bounces in slow, floaty lunar gravity |
+| **Stardust Ribbon** | A silky ribbon of starlight with a glowing tassel — drag a stylus and it becomes a real wand toy |
+
+### For Walle 💙
+
+| Game | What cats do |
+|------|----------------|
+| **Walle's Chirp Chase** | A cricket sings somewhere on screen and its chirp pans left/right through the speakers to match — so Walle, blind since his double enucleation, hunts it entirely by ear. Huge forgiving catch zone, a happy trill on every pounce, and an audible scamper-trail when the critter relocates |
+
+> Walle lost both eyes years ago and never lost the hunt. Chirp sounds stay on in his game even
+> when other sounds are off — sound is how Walle sees. He rests in the corner of the scene,
+> ears turning toward every chirp.
 
 ### In memory of Phoenix
 
 | Game | What cats do |
 |------|----------------|
-| **Phoenix's Rainbow Bridge** | Catch vanishing treats & catnip in the Sedona desert before tumbleweeds roll them away, while a gentle phoenix soars beneath the rainbow bridge |
+| **Phoenix's Rainbow Bridge** | Catch vanishing treats & catnip in the Sedona desert before tumbleweeds roll them away, while Phoenix himself — a green-eyed mackerel tabby drawn from his photo, soaring on flame wings — patrols beneath the rainbow bridge |
 
 > Phoenix crossed the rainbow bridge after five bright years, taken too soon by kidney failure.
 > This game keeps his flame dancing over the red rocks — every fifth catch sends a soft rainbow

@@ -48,6 +48,11 @@ const SERIES_SECTIONS: { key: GameSeries; title: string; sub: string }[] = [
     sub: "Gentle celestial toys named for two curious kittens.",
   },
   {
+    key: "family",
+    title: "For Walle 💙",
+    sub: "Sound-first play for our blind, brave gentleman — chirps he can hunt entirely by ear.",
+  },
+  {
     key: "memorial",
     title: "In memory of Phoenix",
     sub: "Phoenix crossed the rainbow bridge after five bright years. His flame still dances over the Sedona sky.",
@@ -367,8 +372,21 @@ function KittenPlayApp() {
             <p>
               Phoenix crossed the rainbow bridge after five bright years, taken too soon by kidney
               failure. <span className="text-fg">Phoenix's Rainbow Bridge</span> — a gentle game set
-              under a rainbow in the Sedona desert, where a phoenix soars and treats wait to be
-              caught before the tumbleweeds claim them — keeps his flame dancing.
+              under a rainbow in the Sedona desert, where Phoenix himself soars on flame wings,
+              drawn from his photo: green-hazel eyes, pink nose, striped tabby coat and all — keeps
+              his flame dancing while treats wait to be caught before the tumbleweeds claim them.
+            </p>
+            <p className="text-fg font-medium flex items-center gap-2 pt-1">
+              <Heart className="size-4 text-sky-400 shrink-0" />
+              For Walle — still here, still playing
+            </p>
+            <p>
+              Walle, our white-and-tabby gentleman, lost both eyes to surgery years ago and never
+              lost the hunt. <span className="text-fg">Walle's Chirp Chase</span> is built ears-first:
+              its cricket sings through the speakers from the same side of the screen it sits on, so
+              Walle can stalk it by sound alone. Chirps stay on even when other sounds are off, the
+              catch zone is extra big, and Walle himself rests in the corner — ears turning toward
+              every chirp.
             </p>
             <p className="text-fg font-medium pt-1">Built for enrichment — not overstimulation.</p>
             <ul className="space-y-2 list-disc pl-5">
@@ -458,7 +476,7 @@ function KittenPlayApp() {
           <div className="mx-auto max-w-3xl space-y-4">
             <div className="flex items-center justify-between gap-3">
               <h2 className="text-sm font-semibold uppercase tracking-wider text-muted">
-                Three game series · nineteen gentle games
+                Four game series · twenty-one gentle games
               </h2>
               <button
                 type="button"
@@ -479,6 +497,7 @@ function KittenPlayApp() {
                     <h3 className="font-semibold flex items-center gap-2 text-fg">
                       {section.key === "classic" && <Cat className="size-4 text-primary" />}
                       {section.key === "space" && <Moon className="size-4 text-lavender" />}
+                      {section.key === "family" && <Heart className="size-4 text-sky-400" />}
                       {section.key === "memorial" && <Heart className="size-4 text-coral" />}
                       {section.title}
                     </h3>
