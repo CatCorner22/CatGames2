@@ -90,23 +90,39 @@ function spatialTone(
   osc.stop(now + duration + 0.02);
 }
 
+/** Pending multi-note timers, so leaving/pausing Walle's game can silence the tail notes. */
+const spatialTimers: ReturnType<typeof setTimeout>[] = [];
+function later(fn: () => void, ms: number) {
+  const id = setTimeout(() => {
+    const i = spatialTimers.indexOf(id);
+    if (i >= 0) spatialTimers.splice(i, 1);
+    fn();
+  }, ms);
+  spatialTimers.push(id);
+}
+
+export function cancelSpatialSounds() {
+  for (const id of spatialTimers) clearTimeout(id);
+  spatialTimers.length = 0;
+}
+
 /** Cricket chirp from a screen position; higher on screen = slightly higher pitch. */
 export function playChirp(pan: number, pitch = 1) {
   spatialTone(1500 * pitch, 0.055, pan, "sine", 0.035, true);
-  setTimeout(() => spatialTone(1700 * pitch, 0.05, pan, "sine", 0.028, true), 70);
+  later(() => spatialTone(1700 * pitch, 0.05, pan, "sine", 0.028, true), 70);
 }
 
 /** Happy rising trill when Walle catches the critter. */
 export function playTrill(pan: number) {
   spatialTone(660, 0.1, pan, "triangle", 0.035, true);
-  setTimeout(() => spatialTone(880, 0.1, pan, "triangle", 0.03, true), 90);
-  setTimeout(() => spatialTone(1174, 0.16, pan, "sine", 0.03, true), 180);
+  later(() => spatialTone(880, 0.1, pan, "triangle", 0.03, true), 90);
+  later(() => spatialTone(1174, 0.16, pan, "sine", 0.03, true), 180);
 }
 
 /** Audible scamper as the critter relocates — pans from its old spot to the new one. */
 export function playScurry(fromPan: number, toPan: number) {
   for (let i = 0; i < 5; i++) {
     const p = fromPan + ((toPan - fromPan) * i) / 4;
-    setTimeout(() => spatialTone(900 + i * 70, 0.04, p, "triangle", 0.02, true), i * 60);
+    later(() => spatialTone(900 + i * 70, 0.04, p, "triangle", 0.02, true), i * 60);
   }
 }

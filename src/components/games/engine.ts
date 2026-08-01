@@ -1,6 +1,6 @@
 import type { GameId, GameSettings } from "./types";
 import { sizeMultiplier, speedMultiplier } from "./types";
-import { playChirp, playPop, playScurry, playSoftChime, playTap, playTrill } from "./audio";
+import { cancelSpatialSounds, playChirp, playPop, playScurry, playSoftChime, playTap, playTrill } from "./audio";
 
 export interface PointerState { x: number; y: number; down: boolean; active: boolean; }
 interface Particle { x: number; y: number; vx: number; vy: number; life: number; max: number; color: string; size: number; }
@@ -118,6 +118,18 @@ export class KittenGameEngine {
         seg.x = clamp(seg.x, -40, this.w + 40);
         seg.y = clamp(seg.y, -40, this.h + 40);
       }
+      if (this.game === "walle") {
+        // The critter is stationary between hops — pull it fully back on screen
+        // (and out of the portrait corner) or it keeps chirping from a spot no
+        // paw can reach.
+        const c = this.entities[0];
+        if (c) {
+          const s = Math.min(this.w, this.h) * 0.13;
+          c.x = clamp(c.x, 100, Math.max(140, this.w - 100));
+          c.y = clamp(c.y, 100, Math.max(140, this.h - 100));
+          if (c.x < s * 2.9 && c.y > this.h - s * 2.3) c.y = Math.max(100, this.h - s * 2.4);
+        }
+      }
       this.wanderX = clamp(this.wanderX, 50, Math.max(50, this.w - 50));
       this.wanderY = clamp(this.wanderY, 50, Math.max(50, this.h - 50));
     }
@@ -135,7 +147,7 @@ export class KittenGameEngine {
     this.raf = requestAnimationFrame(loop);
   }
 
-  stop() { this.running = false; cancelAnimationFrame(this.raf); }
+  stop() { this.running = false; cancelAnimationFrame(this.raf); cancelSpatialSounds(); }
   destroy() { this.stop(); }
   private sm() { return speedMultiplier(this.settings.speed); }
   private zm() { return sizeMultiplier(this.settings.size); }
@@ -148,6 +160,7 @@ export class KittenGameEngine {
 
   reset() {
     this.initialized = true;
+    cancelSpatialSounds();
     this.entities = []; this.particles = []; this.score = 0; this.time = 0;
     this.wanderT = 0; this.wanderX = this.w * 0.5; this.wanderY = this.h * 0.5;
     this.pointer.down = false; this.pointer.active = false;
@@ -229,7 +242,7 @@ export class KittenGameEngine {
       this.main = null;
     } else if (this.game === "ribbon") {
       this.main = { x: cx, y: cy * 0.6, vx: 30, vy: 10, r: 12 * z, phase: 0, hue: 300, kind: "ribbonhead", angle: 0 };
-      this.ribbon = Array.from({ length: 24 }, (_, i) => ({ x: cx, y: cy * 0.6 + (i + 1) * 11 * z }));
+      this.ribbon = Array.from({ length: 24 }, (_, i) => ({ x: cx, y: Math.min(cy * 0.6 + (i + 1) * 11 * z, this.h - 20) }));
     } else if (this.game === "walle") {
       this.main = null;
       this.walleMoveT = 0;
@@ -279,10 +292,22 @@ export class KittenGameEngine {
   /** Stereo pan (-1..1) for an x position — how Walle "sees" the screen. */
   private panOf(x: number) { return clamp((x / Math.max(1, this.w)) * 2 - 1, -1, 1); }
 
+  /** A spot for the critter that stays clear of the Walle portrait's corner. */
+  private critterSpot() {
+    const s = Math.min(this.w, this.h) * 0.13;
+    for (let i = 0; i < 20; i++) {
+      const x = rand(100, Math.max(140, this.w - 100));
+      const y = rand(100, Math.max(140, this.h - 100));
+      if (!(x < s * 2.9 && y > this.h - s * 2.3)) return { x, y };
+    }
+    return { x: this.w * 0.6, y: this.h * 0.4 };
+  }
+
   private spawnCritter() {
     const z = this.zm();
+    const p = this.critterSpot();
     this.entities.push({
-      x: rand(100, Math.max(140, this.w - 100)), y: rand(100, Math.max(140, this.h - 100)),
+      x: p.x, y: p.y,
       vx: 0, vy: 0, r: 15 * z, phase: rand(0, Math.PI * 2), hue: 90, kind: "critter",
       life: 0, timer: 0.6,
     });
@@ -290,8 +315,8 @@ export class KittenGameEngine {
 
   private relocateCritter(c: Entity) {
     const from = this.panOf(c.x);
-    c.x = rand(100, Math.max(140, this.w - 100));
-    c.y = rand(100, Math.max(140, this.h - 100));
+    const p = this.critterSpot();
+    c.x = p.x; c.y = p.y;
     c.life = 0; c.timer = 0.55; this.walleMoveT = 0;
     playScurry(from, this.panOf(c.x));
   }
@@ -681,6 +706,8 @@ export class KittenGameEngine {
       m.x += (tx - m.x) * Math.min(1, 1.6 * dt);
       m.y += (ty - m.y) * Math.min(1, 1.6 * dt);
       const mvx = m.x - px; const mvy = m.y - py;
+      // Real velocity so drawPhoenixCat's flip/bank sees his travel direction
+      if (dt > 0) { m.vx = mvx / dt; m.vy = mvy / dt; }
       if (Math.abs(mvx) + Math.abs(mvy) > 0.3) m.angle = Math.atan2(mvy, mvx);
       m.phase += dt * 7;
       m.timer = Math.max(0, (m.timer ?? 0) - dt);

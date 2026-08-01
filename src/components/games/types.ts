@@ -231,7 +231,7 @@ export const GAME_CATALOG: GameMeta[] = [
     name: "Phoenix's Rainbow Bridge",
     tagline: "For Phoenix ❤",
     blurb:
-      "Catch vanishing treats and catnip in the Sedona desert before tumbleweeds roll them away, while a gentle phoenix soars beneath the rainbow bridge. In loving memory of Phoenix — five bright years.",
+      "Catch vanishing treats and catnip in the Sedona desert before tumbleweeds roll them away, while Phoenix himself — a green-eyed tabby on flame wings, drawn from his photo — soars beneath the rainbow bridge. In loving memory of Phoenix — five bright years.",
     accent: "#fb923c",
     icon: "phoenix",
     series: "memorial",
