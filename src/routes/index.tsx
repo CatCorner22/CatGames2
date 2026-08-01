@@ -45,6 +45,7 @@ function loadSettings(): GameSettings {
 
 function KittenPlayApp() {
   const [view, setView] = useState<View>("hub");
+  const [returnTo, setReturnTo] = useState<View>("hub");
   const [game, setGame] = useState<GameId>("laser");
   const [settings, setSettings] = useState<GameSettings>(DEFAULT_SETTINGS);
   const [score, setScore] = useState(0);
@@ -75,12 +76,16 @@ function KittenPlayApp() {
       setChromeHidden(false);
       return;
     }
-    // Auto-hide UI so cats focus on the toy, not chrome
     const t = window.setTimeout(() => setChromeHidden(true), 3500);
     return () => clearTimeout(t);
   }, [view, game]);
 
   const meta = useMemo(() => GAME_CATALOG.find((g) => g.id === game)!, [game]);
+
+  const openSettings = useCallback((from: View) => {
+    setReturnTo(from);
+    setView("settings");
+  }, []);
 
   const startGame = useCallback((id: GameId) => {
     unlockAudio();
@@ -106,7 +111,7 @@ function KittenPlayApp() {
       if (!document.fullscreenElement) await el.requestFullscreen?.();
       else await document.exitFullscreen?.();
     } catch {
-      /* ignore — some embedded previews block fullscreen */
+      /* ignore */
     }
   };
 
@@ -136,7 +141,6 @@ function KittenPlayApp() {
           )}
         </div>
 
-        {/* Edge tap to reveal chrome */}
         <button
           type="button"
           aria-label="Show controls"
@@ -187,7 +191,7 @@ function KittenPlayApp() {
             </button>
             <button
               type="button"
-              onClick={() => setView("settings")}
+              onClick={() => openSettings("play")}
               className="rounded-full bg-surface/90 backdrop-blur border border-border p-2.5 min-h-11 min-w-11 shadow-lg"
               aria-label="Settings"
             >
@@ -208,7 +212,9 @@ function KittenPlayApp() {
                 <p className="font-semibold" style={{ color: meta.accent }}>
                   {meta.name}
                 </p>
-                <p className="text-xs text-muted">{meta.tagline} · touch or stylus · auto-hides controls</p>
+                <p className="text-xs text-muted">
+                  {meta.tagline} · touch or stylus · auto-hides controls
+                </p>
               </div>
               <div className="flex gap-1.5 overflow-x-auto max-w-full pb-0.5">
                 {GAME_CATALOG.map((g) => (
@@ -247,7 +253,7 @@ function KittenPlayApp() {
           <div className="flex items-center gap-3">
             <button
               type="button"
-              onClick={() => setView(game ? "play" : "hub")}
+              onClick={() => setView(returnTo === "settings" ? "hub" : returnTo)}
               className="rounded-full border border-border bg-surface p-2.5 min-h-11 min-w-11"
             >
               <ArrowLeft className="size-4" />
@@ -260,10 +266,10 @@ function KittenPlayApp() {
           <SettingsPanel settings={settings} onChange={setSettings} />
           <button
             type="button"
-            onClick={() => setView("play")}
+            onClick={() => setView(returnTo === "settings" ? "hub" : returnTo)}
             className="w-full rounded-2xl bg-primary text-primary-fg font-semibold py-3.5 min-h-12"
           >
-            Back to play
+            Done
           </button>
         </div>
       </div>
@@ -312,7 +318,6 @@ function KittenPlayApp() {
     );
   }
 
-  // Hub
   return (
     <div className="h-dvh overflow-y-auto bg-bg text-fg">
       <div className="relative overflow-hidden">
@@ -343,7 +348,7 @@ function KittenPlayApp() {
             <div className="flex flex-col gap-2 shrink-0">
               <button
                 type="button"
-                onClick={() => setView("settings")}
+                onClick={() => openSettings("hub")}
                 className="rounded-full border border-border bg-surface p-2.5 min-h-11 min-w-11"
                 aria-label="Settings"
               >
@@ -364,7 +369,9 @@ function KittenPlayApp() {
         <main className="safe-pad pb-10 pt-4">
           <div className="mx-auto max-w-3xl space-y-4">
             <div className="flex items-center justify-between gap-3">
-              <h2 className="text-sm font-semibold uppercase tracking-wider text-muted">Game series</h2>
+              <h2 className="text-sm font-semibold uppercase tracking-wider text-muted">
+                Game series
+              </h2>
               <button
                 type="button"
                 onClick={() => startGame("laser")}
