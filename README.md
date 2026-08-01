@@ -25,6 +25,22 @@ Soft motion · non-scary · high-contrast targets · stylus & paw friendly · sh
 | **Eclipse Moon** | Dark moon with a gentle glowing corona |
 | **Comet Trail** | A soft comet with a silky tail to chase |
 | **Nebula Dust** | Colorful glowing dust clouds that sparkle on touch |
+| **Star Shower** | Gentle shooting stars glide down — bat one into stardust |
+| **Saturn Sparkles** | Sparkle moons circle a cozy ringed planet — orbit tracking |
+| **Aurora Paws** | Calm aurora ribbons with drifting glow orbs — ultra low-key |
+| **Moon Moths** | Glowing moths flutter around a crescent moon |
+| **Kitten Constellation** | Tap the twinkling star to draw a kitten across the sky |
+| **Luna Bounce** | A little moon bounces in slow, floaty lunar gravity |
+
+### In memory of Phoenix
+
+| Game | What cats do |
+|------|----------------|
+| **Phoenix's Rainbow Bridge** | Catch vanishing treats & catnip in the Sedona desert before tumbleweeds roll them away, while a gentle phoenix soars beneath the rainbow bridge |
+
+> Phoenix crossed the rainbow bridge after five bright years, taken too soon by kidney failure.
+> This game keeps his flame dancing over the red rocks — every fifth catch sends a soft rainbow
+> shower down from the bridge in his honor.
 
 ## Settings (tablet-friendly)
 
@@ -47,6 +63,7 @@ Soft motion · non-scary · high-contrast targets · stylus & paw friendly · sh
 ## GitHub
 
 Repository: [https://github.com/CatCorner22/CatGames](https://github.com/CatCorner22/CatGames)
+Mirror: [https://github.com/CatCorner22/CatGames2](https://github.com/CatCorner22/CatGames2)
 
 ## Develop locally
 

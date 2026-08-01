@@ -7,10 +7,13 @@ interface Props {
   game: GameId;
   settings: GameSettings;
   onScore: (n: number) => void;
+  paused?: boolean;
+  /** Bump to force a fresh round even when `game` is unchanged (e.g. re-tapping the active chip). */
+  resetToken?: number;
   className?: string;
 }
 
-export function GameCanvas({ game, settings, onScore, className }: Props) {
+export function GameCanvas({ game, settings, onScore, paused = false, resetToken = 0, className }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const engineRef = useRef<KittenGameEngine | null>(null);
   const onScoreRef = useRef(onScore);
@@ -41,11 +44,18 @@ export function GameCanvas({ game, settings, onScore, className }: Props) {
 
   useEffect(() => {
     engineRef.current?.setGame(game);
-  }, [game]);
+  }, [game, resetToken]);
 
   useEffect(() => {
     engineRef.current?.setSettings(settings);
   }, [settings]);
+
+  useEffect(() => {
+    const engine = engineRef.current;
+    if (!engine) return;
+    if (paused) engine.stop();
+    else engine.start();
+  }, [paused]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -75,7 +85,9 @@ export function GameCanvas({ game, settings, onScore, className }: Props) {
       engine.setPointer({ x, y, down: false, active: true });
     };
     const onPointerLeave = () => {
-      engine.setPointer({ down: false });
+      // `active: false` lets "follow" mode fall back to auto-roam when the
+      // stylus/paw leaves the canvas instead of freezing on the last position.
+      engine.setPointer({ down: false, active: false });
     };
 
     canvas.addEventListener("pointerdown", onPointerDown);

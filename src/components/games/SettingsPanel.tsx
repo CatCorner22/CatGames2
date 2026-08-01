@@ -8,7 +8,7 @@ interface Props {
   className?: string;
 }
 
-function Chip<T extends string>({
+function Chip({
   active,
   label,
   onClick,
