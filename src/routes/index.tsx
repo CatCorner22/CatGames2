@@ -6,7 +6,9 @@ import {
   Clock3,
   Fullscreen,
   Github,
+  Heart,
   Maximize2,
+  Moon,
   Pause,
   Play,
   Settings2,
@@ -19,6 +21,8 @@ import {
   DEFAULT_SETTINGS,
   GAME_CATALOG,
   type GameId,
+  type GameMeta,
+  type GameSeries,
   type GameSettings,
 } from "@/components/games/types";
 import { setSoundEnabled, unlockAudio } from "@/components/games/audio";
@@ -31,6 +35,24 @@ export const Route = createFileRoute("/")({
 type View = "hub" | "play" | "settings" | "about";
 
 const STORAGE_KEY = "kittenplay-settings-v1";
+
+const SERIES_SECTIONS: { key: GameSeries; title: string; sub: string }[] = [
+  {
+    key: "classic",
+    title: "Classic play",
+    sub: "Everyday favorites — chase, pounce, pop, and bat.",
+  },
+  {
+    key: "space",
+    title: "Space series · for Orion & Eclipse",
+    sub: "Gentle celestial toys named for two curious kittens.",
+  },
+  {
+    key: "memorial",
+    title: "In memory of Phoenix",
+    sub: "Phoenix crossed the rainbow bridge after five bright years. His flame still dances over the Sedona sky.",
+  },
+];
 
 function loadSettings(): GameSettings {
   if (typeof window === "undefined") return DEFAULT_SETTINGS;
@@ -76,9 +98,12 @@ function KittenPlayApp() {
       setChromeHidden(false);
       return;
     }
+    // Re-arm whenever the chrome is shown again (tap, pause, game switch) so
+    // controls always tuck away and kittens see only the toy.
+    if (chromeHidden || paused) return;
     const t = window.setTimeout(() => setChromeHidden(true), 3500);
     return () => clearTimeout(t);
-  }, [view, game]);
+  }, [view, game, chromeHidden, paused]);
 
   const meta = useMemo(() => GAME_CATALOG.find((g) => g.id === game)!, [game]);
 
@@ -97,7 +122,8 @@ function KittenPlayApp() {
     setView("play");
   }, []);
 
-  const restReminder = sessionSec > 0 && sessionSec % 180 === 0 && sessionSec >= 180;
+  // Show the rest nudge for a 15s window after each 3-minute mark (not a 1s flash).
+  const restReminder = sessionSec >= 180 && sessionSec % 180 < 15;
 
   const fmt = (s: number) => {
     const m = Math.floor(s / 60);
@@ -119,27 +145,25 @@ function KittenPlayApp() {
     return (
       <div className="relative h-dvh w-full overflow-hidden bg-bg text-fg">
         <div className={cn("absolute inset-0", paused && "opacity-40 pointer-events-none")}>
-          {!paused && (
-            <GameCanvas
-              key={game}
-              game={game}
-              settings={settings}
-              onScore={setScore}
-              className="h-full w-full"
-            />
-          )}
-          {paused && (
-            <div className="flex h-full items-center justify-center bg-bg">
-              <div className="text-center space-y-3 px-6">
-                <Pause className="mx-auto size-10 text-primary" />
-                <p className="text-xl font-semibold">Paused rest</p>
-                <p className="text-muted text-sm max-w-xs">
-                  Short breaks keep play enriching, not overstimulating.
-                </p>
-              </div>
-            </div>
-          )}
+          <GameCanvas
+            game={game}
+            settings={settings}
+            onScore={setScore}
+            paused={paused}
+            className="h-full w-full"
+          />
         </div>
+        {paused && (
+          <div className="absolute inset-0 z-10 flex items-center justify-center bg-bg/70 backdrop-blur-sm">
+            <div className="text-center space-y-3 px-6">
+              <Pause className="mx-auto size-10 text-primary" />
+              <p className="text-xl font-semibold">Paused rest</p>
+              <p className="text-muted text-sm max-w-xs">
+                Short breaks keep play enriching, not overstimulating.
+              </p>
+            </div>
+          </div>
+        )}
 
         <button
           type="button"
@@ -291,7 +315,17 @@ function KittenPlayApp() {
             <h1 className="text-xl font-semibold">About KittenPlay</h1>
           </div>
           <div className="rounded-2xl border border-border bg-surface p-5 space-y-3 text-sm leading-relaxed text-muted">
-            <p className="text-fg font-medium">Built for enrichment — not overstimulation.</p>
+            <p className="text-fg font-medium flex items-center gap-2">
+              <Heart className="size-4 text-coral shrink-0" />
+              In loving memory of Phoenix
+            </p>
+            <p>
+              Phoenix crossed the rainbow bridge after five bright years, taken too soon by kidney
+              failure. <span className="text-fg">Phoenix's Rainbow Bridge</span> — a gentle game set
+              under a rainbow in the Sedona desert, where a phoenix soars and treats wait to be
+              caught before the tumbleweeds claim them — keeps his flame dancing.
+            </p>
+            <p className="text-fg font-medium pt-1">Built for enrichment — not overstimulation.</p>
             <ul className="space-y-2 list-disc pl-5">
               <li>Soft motion, no strobing, no jump-scare sounds</li>
               <li>Large, high-contrast targets kittens can track and bat</li>
@@ -309,6 +343,15 @@ function KittenPlayApp() {
                 rel="noreferrer"
               >
                 CatCorner22/CatGames
+              </a>{" "}
+              with a mirror at{" "}
+              <a
+                className="text-primary underline-offset-2 hover:underline"
+                href="https://github.com/CatCorner22/CatGames2"
+                target="_blank"
+                rel="noreferrer"
+              >
+                CatCorner22/CatGames2
               </a>
               .
             </p>
@@ -370,7 +413,7 @@ function KittenPlayApp() {
           <div className="mx-auto max-w-3xl space-y-4">
             <div className="flex items-center justify-between gap-3">
               <h2 className="text-sm font-semibold uppercase tracking-wider text-muted">
-                Game series
+                Three game series · nineteen gentle games
               </h2>
               <button
                 type="button"
@@ -382,35 +425,28 @@ function KittenPlayApp() {
               </button>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {GAME_CATALOG.map((g) => (
-                <button
-                  key={g.id}
-                  type="button"
-                  onClick={() => startGame(g.id)}
-                  className="group text-left rounded-2xl border border-border bg-surface p-4 sm:p-5 hover:border-primary/40 hover:bg-surface-elevated transition-colors min-h-[7.5rem] shadow-sm"
-                >
-                  <div className="flex items-start gap-3.5">
-                    <div
-                      className="shrink-0 rounded-2xl size-14 flex items-center justify-center border border-border"
-                      style={{ background: `${g.accent}22`, color: g.accent }}
-                    >
-                      <GameGlyph id={g.id} className="size-8" />
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center justify-between gap-2">
-                        <h3 className="font-semibold text-lg truncate">{g.name}</h3>
-                        <Fullscreen className="size-4 text-muted opacity-0 group-hover:opacity-100 transition-opacity" />
-                      </div>
-                      <p className="text-xs font-medium mt-0.5" style={{ color: g.accent }}>
-                        {g.tagline}
-                      </p>
-                      <p className="mt-1.5 text-sm text-muted leading-snug line-clamp-2">{g.blurb}</p>
-                    </div>
+            {SERIES_SECTIONS.map((section) => {
+              const games = GAME_CATALOG.filter((g) => g.series === section.key);
+              if (games.length === 0) return null;
+              return (
+                <section key={section.key} className="space-y-2.5">
+                  <div className="pt-2">
+                    <h3 className="font-semibold flex items-center gap-2 text-fg">
+                      {section.key === "classic" && <Cat className="size-4 text-primary" />}
+                      {section.key === "space" && <Moon className="size-4 text-lavender" />}
+                      {section.key === "memorial" && <Heart className="size-4 text-coral" />}
+                      {section.title}
+                    </h3>
+                    <p className="text-xs text-muted mt-1 leading-relaxed max-w-xl">{section.sub}</p>
                   </div>
-                </button>
-              ))}
-            </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {games.map((g) => (
+                      <GameCard key={g.id} game={g} onStart={startGame} />
+                    ))}
+                  </div>
+                </section>
+              );
+            })}
 
             <div className="rounded-2xl border border-border bg-surface/80 p-4 sm:p-5">
               <h3 className="font-semibold flex items-center gap-2">
@@ -436,5 +472,34 @@ function KittenPlayApp() {
         </main>
       </div>
     </div>
+  );
+}
+
+function GameCard({ game: g, onStart }: { game: GameMeta; onStart: (id: GameId) => void }) {
+  return (
+    <button
+      type="button"
+      onClick={() => onStart(g.id)}
+      className="group text-left rounded-2xl border border-border bg-surface p-4 sm:p-5 hover:border-primary/40 hover:bg-surface-elevated transition-colors min-h-[7.5rem] shadow-sm"
+    >
+      <div className="flex items-start gap-3.5">
+        <div
+          className="shrink-0 rounded-2xl size-14 flex items-center justify-center border border-border"
+          style={{ background: `${g.accent}22`, color: g.accent }}
+        >
+          <GameGlyph id={g.id} className="size-8" />
+        </div>
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center justify-between gap-2">
+            <h3 className="font-semibold text-lg truncate">{g.name}</h3>
+            <Fullscreen className="size-4 text-muted opacity-0 group-hover:opacity-100 transition-opacity" />
+          </div>
+          <p className="text-xs font-medium mt-0.5" style={{ color: g.accent }}>
+            {g.tagline}
+          </p>
+          <p className="mt-1.5 text-sm text-muted leading-snug line-clamp-2">{g.blurb}</p>
+        </div>
+      </div>
+    </button>
   );
 }
