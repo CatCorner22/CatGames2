@@ -36,6 +36,15 @@ const SPACE_BG_GAMES: GameId[] = [
   "starshower", "saturn", "aurora", "moonmoth", "constellation", "lunabounce",
 ];
 
+const GAME_BGS: Record<string, [string, string]> = {
+  laser: ["#0b1020", "#151a2e"], butterfly: ["#1a1430", "#2a1f45"], mouse: ["#1c1814", "#2a241c"],
+  bubbles: ["#0c1a28", "#123048"], yarn: ["#1a1420", "#261828"], fireflies: ["#0a1210", "#122018"],
+  fish: ["#0a2030", "#0f3550"], treats: ["#141820", "#1c2430"],
+  orion: ["#050814", "#0c1228"], comet: ["#04060f", "#0a1424"], eclipse: ["#06050c", "#12101c"], nebula: ["#0a0614", "#1a0f28"],
+  starshower: ["#050b1e", "#101b38"], saturn: ["#0b0a1a", "#191430"], aurora: ["#04101c", "#0a2030"],
+  moonmoth: ["#0a0a18", "#141228"], constellation: ["#060a1c", "#0e1630"], lunabounce: ["#0b0f1d", "#161d33"],
+};
+
 export class KittenGameEngine {
   private canvas: HTMLCanvasElement;
   private ctx: CanvasRenderingContext2D;
@@ -49,6 +58,7 @@ export class KittenGameEngine {
   private time = 0; private wanderT = 0; private wanderX = 0; private wanderY = 0;
   private score = 0; private lastPop = 0; private running = false; private raf = 0; private lastTs = 0;
   private initialized = false;
+  private vignette: CanvasGradient | null = null;
   private onScore?: (n: number) => void;
   // Kitten Constellation round state
   private constProgress = 0; private constCelebrate = 0; private constAuto = 0;
@@ -71,9 +81,16 @@ export class KittenGameEngine {
   resize() {
     const parent = this.canvas.parentElement;
     const rect = parent?.getBoundingClientRect() ?? this.canvas.getBoundingClientRect();
-    this.dpr = Math.min(window.devicePixelRatio || 1, 2);
-    this.w = Math.max(1, Math.floor(rect.width));
-    this.h = Math.max(1, Math.floor(rect.height));
+    const nw = Math.max(1, Math.floor(rect.width));
+    const nh = Math.max(1, Math.floor(rect.height));
+    const ndpr = Math.min(window.devicePixelRatio || 1, 2);
+    // Reallocating the backing store clears the canvas — skip no-op calls
+    // (window listener + ResizeObserver both fire for the same layout change).
+    if (this.initialized && nw === this.w && nh === this.h && ndpr === this.dpr) return;
+    this.dpr = ndpr;
+    this.w = nw;
+    this.h = nh;
+    this.vignette = null;
     this.canvas.width = Math.floor(this.w * this.dpr);
     this.canvas.height = Math.floor(this.h * this.dpr);
     this.canvas.style.width = `${this.w}px`;
@@ -313,7 +330,7 @@ export class KittenGameEngine {
       const fy = this.game === "butterfly" ? Math.cos(this.time * 7.5) * 30 * sm : 0;
       m.vx += (t.x + fx - m.x) * k * sm * dt; m.vy += (t.y + fy - m.y) * k * sm * dt;
       m.vx *= 0.9; m.vy *= 0.9;
-      if (Math.random() < 0.015 * sm) { m.vx += rand(-200, 200) * sm; m.vy += rand(-200, 200) * sm; }
+      if (Math.random() < 0.9 * sm * dt) { m.vx += rand(-200, 200) * sm; m.vy += rand(-200, 200) * sm; }
       m.x = clamp(m.x + m.vx * dt, m.r, this.w - m.r);
       m.y = clamp(m.y + m.vy * dt, m.r, this.h - m.r);
       m.phase += dt * 6; m.angle = Math.atan2(m.vy, m.vx);
@@ -373,7 +390,7 @@ export class KittenGameEngine {
       if (m.x < m.r || m.x > this.w - m.r) m.vx *= -0.7;
       m.x = clamp(m.x, m.r, this.w - m.r);
       m.angle = (m.angle ?? 0) + (m.vx / Math.max(10, m.r)) * dt;
-      if (luna && Math.abs(m.vx) + Math.abs(m.vy) < 22 && Math.random() < 0.008 * sm) {
+      if (luna && Math.abs(m.vx) + Math.abs(m.vy) < 22 && Math.random() < 0.5 * sm * dt) {
         m.vx += rand(-90, 90) * sm; m.vy -= rand(60, 120) * sm;
       }
     }
@@ -449,8 +466,12 @@ export class KittenGameEngine {
       const m = this.main;
       m.vx += (t.x - m.x) * 0.5 * sm * dt; m.vy += (t.y - m.y) * 0.5 * sm * dt;
       m.vx *= 0.95; m.vy *= 0.95;
-      m.x = clamp(m.x + m.vx * dt, m.r * 2.6, this.w - m.r * 2.6);
-      m.y = clamp(m.y + m.vy * dt, m.r * 1.6, this.h - m.r * 1.6);
+      // Keep the widest moon orbit (3.0 * r plus the moon itself) fully on screen
+      // even when the planet is pinned at the clamp bound.
+      const mx = Math.min(m.r * 3.3, this.w * 0.45);
+      const my = Math.min(m.r * 1.75, this.h * 0.45);
+      m.x = clamp(m.x + m.vx * dt, mx, this.w - mx);
+      m.y = clamp(m.y + m.vy * dt, my, this.h - my);
       m.phase += dt;
       for (const e of this.entities) {
         if (e.kind !== "ringmoon") continue;
@@ -503,7 +524,7 @@ export class KittenGameEngine {
       const { stars } = this.constellationLayout();
       if (this.constCelebrate > 0) {
         this.constCelebrate -= dt;
-        if (Math.random() < 0.25) {
+        if (Math.random() < 15 * dt) {
           const s = stars[Math.floor(rand(0, stars.length))]!;
           this.burst(s.x, s.y, "#93c5fd", 4);
         }
@@ -520,10 +541,24 @@ export class KittenGameEngine {
           this.burst(active.x, active.y, "#bfdbfe", 12); playSoftChime();
           this.score += 1; this.onScore?.(this.score);
           this.constProgress += 1; this.constAuto = 0;
-        } else if (this.settings.control === "auto") {
-          // Hands-free mode: the sky slowly draws the kitten by itself.
+        } else {
+          // Batting any other star answers back with a soft sparkle (no score),
+          // so paws never get dead silence.
+          if (this.pointer.down && now - this.lastAdvance > 350) {
+            for (const s of stars) {
+              if (s === active) continue;
+              if (dist(this.pointer.x, this.pointer.y, s.x, s.y) < hitR) {
+                this.lastAdvance = now;
+                this.burst(s.x, s.y, "rgba(147,197,253,0.55)", 4);
+                break;
+              }
+            }
+          }
+          // Assist in every mode so the sky never stalls; brisker when the whole
+          // game is hands-free.
           this.constAuto += dt;
-          if (this.constAuto > 3.2 / sm) {
+          const assistAfter = (this.settings.control === "auto" ? 3.2 : 7) / sm;
+          if (this.constAuto > assistAfter) {
             this.constAuto = 0;
             this.burst(active.x, active.y, "#bfdbfe", 8);
             this.constProgress += 1;
@@ -838,15 +873,7 @@ export class KittenGameEngine {
     if (this.game === "phoenix") {
       this.drawSedonaScene();
     } else {
-      const bgs: Record<string, [string, string]> = {
-        laser: ["#0b1020", "#151a2e"], butterfly: ["#1a1430", "#2a1f45"], mouse: ["#1c1814", "#2a241c"],
-        bubbles: ["#0c1a28", "#123048"], yarn: ["#1a1420", "#261828"], fireflies: ["#0a1210", "#122018"],
-        fish: ["#0a2030", "#0f3550"], treats: ["#141820", "#1c2430"],
-        orion: ["#050814", "#0c1228"], comet: ["#04060f", "#0a1424"], eclipse: ["#06050c", "#12101c"], nebula: ["#0a0614", "#1a0f28"],
-        starshower: ["#050b1e", "#101b38"], saturn: ["#0b0a1a", "#191430"], aurora: ["#04101c", "#0a2030"],
-        moonmoth: ["#0a0a18", "#141228"], constellation: ["#060a1c", "#0e1630"], lunabounce: ["#0b0f1d", "#161d33"],
-      };
-      const bg = bgs[this.game] || bgs.laser!;
+      const bg = GAME_BGS[this.game] || GAME_BGS.laser!;
       const g = ctx.createLinearGradient(0, 0, 0, h); g.addColorStop(0, bg[0]); g.addColorStop(1, bg[1]);
       ctx.fillStyle = g; ctx.fillRect(0, 0, w, h);
       if (SPACE_BG_GAMES.includes(this.game)) this.drawStarfield(this.game === "aurora" ? 24 : 44);
@@ -1082,9 +1109,12 @@ export class KittenGameEngine {
     }
     ctx.globalAlpha = 1;
     if (this.settings.softGlow) {
-      const vg = ctx.createRadialGradient(w / 2, h / 2, Math.min(w, h) * 0.25, w / 2, h / 2, Math.max(w, h) * 0.72);
-      vg.addColorStop(0, "rgba(0,0,0,0)"); vg.addColorStop(1, "rgba(0,0,0,0.22)");
-      ctx.fillStyle = vg; ctx.fillRect(0, 0, w, h);
+      if (!this.vignette) {
+        const vg = ctx.createRadialGradient(w / 2, h / 2, Math.min(w, h) * 0.25, w / 2, h / 2, Math.max(w, h) * 0.72);
+        vg.addColorStop(0, "rgba(0,0,0,0)"); vg.addColorStop(1, "rgba(0,0,0,0.22)");
+        this.vignette = vg;
+      }
+      ctx.fillStyle = this.vignette; ctx.fillRect(0, 0, w, h);
     }
   }
 }

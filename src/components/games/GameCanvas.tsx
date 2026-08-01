@@ -8,10 +8,12 @@ interface Props {
   settings: GameSettings;
   onScore: (n: number) => void;
   paused?: boolean;
+  /** Bump to force a fresh round even when `game` is unchanged (e.g. re-tapping the active chip). */
+  resetToken?: number;
   className?: string;
 }
 
-export function GameCanvas({ game, settings, onScore, paused = false, className }: Props) {
+export function GameCanvas({ game, settings, onScore, paused = false, resetToken = 0, className }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const engineRef = useRef<KittenGameEngine | null>(null);
   const onScoreRef = useRef(onScore);
@@ -42,7 +44,7 @@ export function GameCanvas({ game, settings, onScore, paused = false, className 
 
   useEffect(() => {
     engineRef.current?.setGame(game);
-  }, [game]);
+  }, [game, resetToken]);
 
   useEffect(() => {
     engineRef.current?.setSettings(settings);

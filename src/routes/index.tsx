@@ -75,6 +75,11 @@ function KittenPlayApp() {
   const [paused, setPaused] = useState(false);
   const [chromeHidden, setChromeHidden] = useState(false);
   const [hydrated, setHydrated] = useState(false);
+  // In-play settings render as an overlay (not a view switch) so the engine —
+  // and the kitten's score — survive a quick tuning trip.
+  const [playSettingsOpen, setPlaySettingsOpen] = useState(false);
+  // Bumped on every startGame so re-tapping the active chip still resets the round.
+  const [playRound, setPlayRound] = useState(0);
 
   useEffect(() => {
     setSettings(loadSettings());
@@ -96,14 +101,15 @@ function KittenPlayApp() {
   useEffect(() => {
     if (view !== "play") {
       setChromeHidden(false);
+      setPlaySettingsOpen(false);
       return;
     }
     // Re-arm whenever the chrome is shown again (tap, pause, game switch) so
     // controls always tuck away and kittens see only the toy.
-    if (chromeHidden || paused) return;
+    if (chromeHidden || paused || playSettingsOpen) return;
     const t = window.setTimeout(() => setChromeHidden(true), 3500);
     return () => clearTimeout(t);
-  }, [view, game, chromeHidden, paused]);
+  }, [view, game, chromeHidden, paused, playSettingsOpen]);
 
   const meta = useMemo(() => GAME_CATALOG.find((g) => g.id === game)!, [game]);
 
@@ -119,6 +125,8 @@ function KittenPlayApp() {
     setSessionSec(0);
     setPaused(false);
     setChromeHidden(false);
+    setPlaySettingsOpen(false);
+    setPlayRound((r) => r + 1);
     setView("play");
   }, []);
 
@@ -149,7 +157,8 @@ function KittenPlayApp() {
             game={game}
             settings={settings}
             onScore={setScore}
-            paused={paused}
+            paused={paused || playSettingsOpen}
+            resetToken={playRound}
             className="h-full w-full"
           />
         </div>
@@ -165,10 +174,12 @@ function KittenPlayApp() {
           </div>
         )}
 
+        {/* Corner-only reveal target: a full-width strip swallowed paw taps on
+            games whose targets cross the top edge (e.g. Star Shower). */}
         <button
           type="button"
           aria-label="Show controls"
-          className="absolute inset-x-0 top-0 h-14 z-20"
+          className="absolute left-0 top-0 h-14 w-20 z-20"
           onClick={() => setChromeHidden(false)}
         />
 
@@ -215,7 +226,7 @@ function KittenPlayApp() {
             </button>
             <button
               type="button"
-              onClick={() => openSettings("play")}
+              onClick={() => setPlaySettingsOpen(true)}
               className="rounded-full bg-surface/90 backdrop-blur border border-border p-2.5 min-h-11 min-w-11 shadow-lg"
               aria-label="Settings"
             >
@@ -258,14 +269,48 @@ function KittenPlayApp() {
                 ))}
               </div>
             </div>
-            {restReminder && (
-              <p className="mt-2 text-xs text-accent flex items-center gap-1.5">
-                <Sparkles className="size-3.5" />
-                Nice session — a 1–2 minute rest keeps kittens happy and safe.
-              </p>
-            )}
           </div>
         </div>
+
+        {/* Rest reminder floats independently of the auto-hidden chrome, so it
+            actually appears during hands-free sessions. */}
+        {restReminder && !paused && !playSettingsOpen && (
+          <div className="pointer-events-none absolute inset-x-0 top-16 z-20 flex justify-center safe-pad">
+            <p className="rounded-full bg-surface/90 backdrop-blur border border-border px-4 py-2.5 text-xs text-accent flex items-center gap-1.5 shadow-lg">
+              <Sparkles className="size-3.5" />
+              Nice session — a 1–2 minute rest keeps kittens happy and safe.
+            </p>
+          </div>
+        )}
+
+        {playSettingsOpen && (
+          <div className="absolute inset-0 z-40 overflow-y-auto bg-bg/80 backdrop-blur-sm safe-pad">
+            <div className="mx-auto max-w-lg py-4 space-y-6">
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => setPlaySettingsOpen(false)}
+                  className="rounded-full border border-border bg-surface p-2.5 min-h-11 min-w-11"
+                  aria-label="Back to game"
+                >
+                  <ArrowLeft className="size-4" />
+                </button>
+                <div>
+                  <h1 className="text-xl font-semibold">Play settings</h1>
+                  <p className="text-sm text-muted">The game waits — score and toy stay put</p>
+                </div>
+              </div>
+              <SettingsPanel settings={settings} onChange={setSettings} />
+              <button
+                type="button"
+                onClick={() => setPlaySettingsOpen(false)}
+                className="w-full rounded-2xl bg-primary text-primary-fg font-semibold py-3.5 min-h-12"
+              >
+                Done
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     );
   }
