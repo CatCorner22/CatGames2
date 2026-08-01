@@ -10,11 +10,19 @@ export type GameId =
   | "orion"
   | "eclipse"
   | "comet"
-  | "nebula";
+  | "nebula"
+  | "starshower"
+  | "saturn"
+  | "aurora"
+  | "moonmoth"
+  | "constellation"
+  | "lunabounce"
+  | "phoenix";
 
 export type SpeedMode = "calm" | "playful" | "zoomies";
 export type SizeMode = "small" | "medium" | "large";
 export type ControlMode = "auto" | "follow" | "mixed";
+export type GameSeries = "classic" | "space" | "memorial";
 
 export interface GameSettings {
   speed: SpeedMode;
@@ -31,7 +39,7 @@ export interface GameMeta {
   blurb: string;
   accent: string;
   icon: string;
-  series?: "classic" | "space";
+  series: GameSeries;
 }
 
 export const GAME_CATALOG: GameMeta[] = [
@@ -142,6 +150,70 @@ export const GAME_CATALOG: GameMeta[] = [
     accent: "#e879f9",
     icon: "nebula",
     series: "space",
+  },
+  {
+    id: "starshower",
+    name: "Star Shower",
+    tagline: "Wishing stars",
+    blurb: "Soft shooting stars glide gently down the night sky. Bat one and it bursts into stardust.",
+    accent: "#fde047",
+    icon: "starshower",
+    series: "space",
+  },
+  {
+    id: "saturn",
+    name: "Saturn Sparkles",
+    tagline: "Ring orbit",
+    blurb: "A cozy ringed planet with sparkle moons circling slowly — perfect orbit-tracking practice.",
+    accent: "#fdba74",
+    icon: "saturn",
+    series: "space",
+  },
+  {
+    id: "aurora",
+    name: "Aurora Paws",
+    tagline: "Sky ribbons",
+    blurb: "Calm aurora ribbons wave across the sky while glow orbs drift along them. Ultra low-key.",
+    accent: "#5eead4",
+    icon: "aurora",
+    series: "space",
+  },
+  {
+    id: "moonmoth",
+    name: "Moon Moths",
+    tagline: "Night flutter",
+    blurb: "Gentle glowing moths circle a crescent moon. Tap one and it puffs into moon-dust sparkles.",
+    accent: "#d8b4fe",
+    icon: "moonmoth",
+    series: "space",
+  },
+  {
+    id: "constellation",
+    name: "Kitten Constellation",
+    tagline: "Connect the stars",
+    blurb: "Stars twinkle to life one by one — tap the bright one to draw a kitten across the sky.",
+    accent: "#93c5fd",
+    icon: "constellation",
+    series: "space",
+  },
+  {
+    id: "lunabounce",
+    name: "Luna Bounce",
+    tagline: "Low gravity",
+    blurb: "A soft little moon bounces in slow lunar gravity. Nudge it, chase it, boop it.",
+    accent: "#e2e8f0",
+    icon: "lunabounce",
+    series: "space",
+  },
+  {
+    id: "phoenix",
+    name: "Phoenix's Rainbow Bridge",
+    tagline: "For Phoenix ❤",
+    blurb:
+      "Catch vanishing treats and catnip in the Sedona desert before tumbleweeds roll them away, while a gentle phoenix soars beneath the rainbow bridge. In loving memory of Phoenix — five bright years.",
+    accent: "#fb923c",
+    icon: "phoenix",
+    series: "memorial",
   },
 ];
 
