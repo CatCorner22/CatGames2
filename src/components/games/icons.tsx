@@ -179,6 +179,25 @@ export function GameGlyph({ id, className = "size-7" }: { id: GameId; className?
           <path d="M10 40c4 3 8 4 14 4s10-1 14-4" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" opacity="0.4" fill="none" />
         </svg>
       );
+    case "walle":
+      return (
+        <svg {...common}>
+          <path d="M8 20l-3-11 10 5" fill="currentColor" opacity="0.9" />
+          <path d="M28 14l10-5-3 11" fill="currentColor" opacity="0.9" />
+          <circle cx="18" cy="26" r="13" fill="currentColor" />
+          <path d="M11 25c1.4 1.6 4 1.6 5.4 0M22 25c1.4 1.6 4 1.6 5.4 0" stroke="#0f1419" strokeWidth="2" strokeLinecap="round" fill="none" />
+          <path d="M17 31h3l-1.5 2z" fill="#0f1419" opacity="0.6" />
+          <path d="M37 20c3 2 3 6 0 8M41 17c5 4 5 10 0 14" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" opacity="0.6" fill="none" />
+        </svg>
+      );
+    case "ribbon":
+      return (
+        <svg {...common}>
+          <path d="M40 8c-10 2-8 10-16 12S12 16 8 24c-4 8 6 10 4 14" stroke="currentColor" strokeWidth="4" strokeLinecap="round" opacity="0.8" fill="none" />
+          <path d="M42 12c-9 2-8 9-15 11S14 20 11 27c-3 6 4 8 3 12" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" opacity="0.3" fill="none" />
+          <path d="M12 38l1.6 3.6 3.9.3-3 2.6.9 3.9-3.4-2.1-3.4 2.1.9-3.9-3-2.6 3.9-.3L12 38z" fill="currentColor" />
+        </svg>
+      );
     case "phoenix":
       return (
         <svg {...common}>
