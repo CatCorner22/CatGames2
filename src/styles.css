@@ -1,0 +1,73 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@theme {
+  --color-bg: #0f1419;
+  --color-surface: #1a2332;
+  --color-surface-elevated: #243044;
+  --color-fg: #f0f4f8;
+  --color-muted: #8b9cb3;
+  --color-primary: #5eead4;
+  --color-primary-fg: #0f1419;
+  --color-accent: #fbbf24;
+  --color-accent-soft: #fcd34d;
+  --color-coral: #fb7185;
+  --color-sky: #7dd3fc;
+  --color-lavender: #c4b5fd;
+  --color-mint: #6ee7b7;
+  --color-border: #2d3a4f;
+  --color-danger: #f87171;
+  --radius-sm: 0.5rem;
+  --radius-md: 0.875rem;
+  --radius-lg: 1.25rem;
+  --radius-xl: 1.75rem;
+  --font-sans: "Segoe UI", "Nunito", system-ui, -apple-system, sans-serif;
+  --font-display: "Segoe UI", "Nunito", system-ui, sans-serif;
+}
+
+@layer base {
+  * {
+    box-sizing: border-box;
+  }
+
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+
+  html {
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+  }
+
+  body {
+    margin: 0;
+    background: var(--color-bg);
+    color: var(--color-fg);
+    font-family: var(--font-sans);
+    line-height: 1.5;
+    overflow: hidden;
+    overscroll-behavior: none;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+
+  button:not(:disabled),
+  [role="button"]:not(:disabled) {
+    cursor: pointer;
+  }
+
+  button {
+    font-family: inherit;
+  }
+}
+
+@layer utilities {
+  .safe-pad {
+    padding: max(0.75rem, env(safe-area-inset-top))
+      max(0.75rem, env(safe-area-inset-right))
+      max(0.75rem, env(safe-area-inset-bottom))
+      max(0.75rem, env(safe-area-inset-left));
+  }
+}
