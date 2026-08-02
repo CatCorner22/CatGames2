@@ -1,5 +1,7 @@
 /** Soft, non-scary synth sounds. Unlocked only after a user gesture. */
 
+import type { GameId } from "./types";
+
 let ctx: AudioContext | null = null;
 let enabled = false;
 
@@ -50,6 +52,111 @@ export function playSoftChime() {
 
 export function playTap() {
   tone(240, 0.06, "sine", 0.02);
+}
+
+/**
+ * Melodic toolkit for the per-game sounds. Everything is scheduled on the
+ * audio clock with a slow ~35ms attack so no sound ever snaps on — gentle for
+ * sensitive kitten ears (mid-range pitches, tiny gains, short tails).
+ */
+function note(freq: number, dur: number, type: OscillatorType = "sine", gain = 0.025, delayMs = 0, attack = 0.035) {
+  if (!enabled || !ctx) return;
+  const t0 = ctx.currentTime + delayMs / 1000;
+  const osc = ctx.createOscillator();
+  const g = ctx.createGain();
+  osc.type = type;
+  osc.frequency.setValueAtTime(freq, t0);
+  g.gain.setValueAtTime(0.0001, t0);
+  g.gain.exponentialRampToValueAtTime(gain, t0 + attack);
+  g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+  osc.connect(g);
+  g.connect(ctx.destination);
+  osc.start(t0);
+  osc.stop(t0 + dur + 0.03);
+}
+
+/** A note whose pitch glides from f0 to f1 — bloops, boings, squeaks, whooshes. */
+function slide(f0: number, f1: number, dur: number, type: OscillatorType = "sine", gain = 0.025, delayMs = 0, attack = 0.03) {
+  if (!enabled || !ctx) return;
+  const t0 = ctx.currentTime + delayMs / 1000;
+  const osc = ctx.createOscillator();
+  const g = ctx.createGain();
+  osc.type = type;
+  osc.frequency.setValueAtTime(Math.max(40, f0), t0);
+  osc.frequency.exponentialRampToValueAtTime(Math.max(40, f1), t0 + dur);
+  g.gain.setValueAtTime(0.0001, t0);
+  g.gain.exponentialRampToValueAtTime(gain, t0 + attack);
+  g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+  osc.connect(g);
+  g.connect(ctx.destination);
+  osc.start(t0);
+  osc.stop(t0 + dur + 0.03);
+}
+
+/** Each game answers a successful bat with its own tiny, characterful sound. */
+export function playScore(game: GameId) {
+  switch (game) {
+    case "laser": // bright little blip-blip
+      note(660, 0.09, "sine", 0.028); note(880, 0.08, "sine", 0.02, 45); break;
+    case "butterfly": // fluttery grace notes
+      note(523, 0.07, "triangle", 0.018); note(622, 0.07, "triangle", 0.018, 60); note(587, 0.09, "triangle", 0.016, 120); break;
+    case "mouse": // tiny squeak-squeak
+      slide(680, 1000, 0.1, "sine", 0.02); slide(900, 700, 0.08, "sine", 0.014, 110); break;
+    case "bubbles": // soft pop
+      note(520, 0.1, "triangle", 0.026); note(780, 0.07, "sine", 0.018, 30); break;
+    case "yarn": // cushioned boing
+      slide(440, 300, 0.16, "sine", 0.028); break;
+    case "fireflies": // twinkle
+      note(784, 0.1, "sine", 0.02); note(1046, 0.14, "sine", 0.015, 70); break;
+    case "fish": // watery bloop
+      slide(520, 240, 0.15, "sine", 0.028); break;
+    case "treats": // happy yum (C then E)
+      note(523, 0.1, "triangle", 0.024); note(659, 0.14, "triangle", 0.02, 80); break;
+    case "orion": // three rising stars, like the belt
+      note(494, 0.1, "sine", 0.02); note(587, 0.1, "sine", 0.02, 70); note(740, 0.14, "sine", 0.018, 140); break;
+    case "eclipse": // warm low halo
+      note(330, 0.18, "sine", 0.024); note(415, 0.22, "sine", 0.016, 100); break;
+    case "comet": // falling whoosh with a spark
+      slide(950, 520, 0.2, "sine", 0.018); note(1046, 0.08, "sine", 0.012, 40); break;
+    case "nebula": // dreamy hum
+      note(392, 0.18, "sine", 0.02); note(587, 0.2, "sine", 0.014, 90); break;
+    case "starshower": // wishing star streak
+      slide(1046, 620, 0.16, "sine", 0.016); note(784, 0.1, "sine", 0.014, 130); break;
+    case "saturn": // ring chime
+      note(587, 0.09, "triangle", 0.02); note(880, 0.12, "sine", 0.016, 60); break;
+    case "aurora": // the slowest, softest shimmer
+      note(440, 0.3, "sine", 0.014, 0, 0.06); note(554, 0.34, "sine", 0.011, 130, 0.06); break;
+    case "moonmoth": // moth-wing flutter
+      note(622, 0.07, "triangle", 0.016); note(740, 0.09, "triangle", 0.014, 70); break;
+    case "constellation":
+      playSoftChime(); break;
+    case "lunabounce": // low-gravity boop-up
+      slide(392, 494, 0.11, "triangle", 0.024); break;
+    case "ribbon": // silky sparkle
+      note(740, 0.08, "sine", 0.02); note(988, 0.1, "sine", 0.016, 55); break;
+    case "phoenix": // warm ember bell
+      note(523, 0.14, "triangle", 0.024); note(784, 0.18, "sine", 0.016, 90); break;
+    case "walle": // walle's catches use the spatial trill in-game; centered here
+      playTrill(0); break;
+    default:
+      playTap();
+  }
+}
+
+/** Little upward rainbow arpeggio for Phoenix's every-fifth-catch shower. */
+export function playRainbowArp() {
+  [523, 659, 784, 1046].forEach((f, i) => note(f, 0.14, "sine", 0.018, i * 85));
+}
+
+/** The whole kitten constellation lights up in the sky. */
+export function playConstellationDone() {
+  [392, 494, 587, 784].forEach((f, i) => note(f, 0.2, "sine", 0.02, i * 110));
+  note(1175, 0.3, "sine", 0.012, 460);
+}
+
+/** Cushioned floor thud for bouncing toys — low, quiet, never sharp. */
+export function playBounce(soft = false) {
+  slide(soft ? 200 : 240, 120, 0.09, "sine", soft ? 0.016 : 0.02, 0, 0.012);
 }
 
 /**

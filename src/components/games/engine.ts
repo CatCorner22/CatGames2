@@ -1,6 +1,16 @@
 import type { GameId, GameSettings } from "./types";
 import { sizeMultiplier, speedMultiplier } from "./types";
-import { cancelSpatialSounds, playChirp, playPop, playScurry, playSoftChime, playTap, playTrill } from "./audio";
+import {
+  cancelSpatialSounds,
+  playBounce,
+  playChirp,
+  playConstellationDone,
+  playRainbowArp,
+  playScore,
+  playScurry,
+  playSoftChime,
+  playTrill,
+} from "./audio";
 
 export interface PointerState { x: number; y: number; down: boolean; active: boolean; }
 interface Particle { x: number; y: number; vx: number; vy: number; life: number; max: number; color: string; size: number; }
@@ -352,7 +362,7 @@ export class KittenGameEngine {
 
   private maybeScore(x: number, y: number, color: string, cd = 220): boolean {
     const now = performance.now(); if (now - this.lastPop < cd) return false;
-    this.lastPop = now; this.burst(x, y, color); playTap(); this.score += 1; this.onScore?.(this.score);
+    this.lastPop = now; this.burst(x, y, color); playScore(this.game); this.score += 1; this.onScore?.(this.score);
     return true;
   }
 
@@ -446,7 +456,11 @@ export class KittenGameEngine {
       m.vx *= drag; m.vy *= drag; m.x += m.vx * dt; m.y += m.vy * dt;
       const floor = this.h - m.r - 8;
       const bounce = luna ? -0.78 : -0.62;
-      if (m.y > floor) { m.y = floor; m.vy *= bounce; m.vx *= luna ? 0.985 : 0.92; }
+      if (m.y > floor) {
+        // Cushioned thud only on real landings, not settle jitter
+        if (m.vy > 90) playBounce(luna);
+        m.y = floor; m.vy *= bounce; m.vx *= luna ? 0.985 : 0.92;
+      }
       if (m.y < m.r) { m.y = m.r; m.vy *= -0.7; }
       if (m.x < m.r || m.x > this.w - m.r) m.vx *= -0.7;
       m.x = clamp(m.x, m.r, this.w - m.r);
@@ -462,7 +476,7 @@ export class KittenGameEngine {
         e.phase += dt * 3; e.x += Math.sin(e.phase) * 18 * dt + e.vx * dt; e.y += e.vy * dt;
         if (e.y < -60) { this.entities.splice(i, 1); continue; }
         if (this.pointer.down && dist(this.pointer.x, this.pointer.y, e.x, e.y) < e.r * 1.15) {
-          this.burst(e.x, e.y, "rgba(125,211,252,0.9)", 14); playPop(); this.score += 1; this.onScore?.(this.score); this.entities.splice(i, 1);
+          this.burst(e.x, e.y, "rgba(125,211,252,0.9)", 14); playScore("bubbles"); this.score += 1; this.onScore?.(this.score); this.entities.splice(i, 1);
         }
       }
     }
@@ -477,7 +491,7 @@ export class KittenGameEngine {
         e.x = clamp(e.x + e.vx * dt, 10, this.w - 10); e.y = clamp(e.y + e.vy * dt, 10, this.h - 10);
         if (this.pointer.down && dist(this.pointer.x, this.pointer.y, e.x, e.y) < e.r * (e.kind === "nebula" ? 1.2 : 3)) {
           if (e.kind === "nebula") {
-            this.burst(e.x, e.y, `hsla(${e.hue},80%,70%,0.8)`, 12); playPop(); this.score += 1; this.onScore?.(this.score);
+            this.burst(e.x, e.y, `hsla(${e.hue},80%,70%,0.8)`, 12); playScore("nebula"); this.score += 1; this.onScore?.(this.score);
             e.x = rand(50, this.w - 50); e.y = rand(50, this.h - 50);
           } else { this.maybeScore(e.x, e.y, "#6ee7b7", 400); e.vx += rand(-40, 40); e.vy += rand(-40, 40); }
         }
@@ -506,7 +520,7 @@ export class KittenGameEngine {
         else if ((e.life ?? 0) > max) e.state = "out";
         e.phase += dt * 3;
         if (this.pointer.down && dist(this.pointer.x, this.pointer.y, e.x, e.y) < e.r * 1.5) {
-          this.burst(e.x, e.y, "#fcd34d", 16); playSoftChime(); this.score += 1; this.onScore?.(this.score); this.entities.splice(i, 1);
+          this.burst(e.x, e.y, "#fcd34d", 16); playScore("starshower"); this.score += 1; this.onScore?.(this.score); this.entities.splice(i, 1);
         }
       }
     }
@@ -518,7 +532,7 @@ export class KittenGameEngine {
         e.x += e.vx * dt; e.y += e.vy * dt;
         if (e.y > this.h + 50 || e.x < -60 || e.x > this.w + 60) { this.entities.splice(i, 1); continue; }
         if (this.pointer.down && dist(this.pointer.x, this.pointer.y, e.x, e.y) < e.r * 3.2) {
-          this.burst(e.x, e.y, "#fde047", 14); playPop(); this.score += 1; this.onScore?.(this.score);
+          this.burst(e.x, e.y, "#fde047", 14); playScore("treats"); this.score += 1; this.onScore?.(this.score);
           this.entities.splice(i, 1);
         }
       }
@@ -627,7 +641,7 @@ export class KittenGameEngine {
         }
         if (this.constProgress >= stars.length) {
           this.constCelebrate = 2.6;
-          playSoftChime();
+          playConstellationDone();
           for (const s of stars) this.burst(s.x, s.y, "#93c5fd", 3);
         }
       }
@@ -761,10 +775,11 @@ export class KittenGameEngine {
         else if (e.state === "out") { e.scale = clamp(1 - ((e.life ?? 0) - max) / 0.5, 0, 1); if ((e.scale ?? 0) <= 0) { this.entities.splice(i, 1); continue; } }
         else if ((e.life ?? 0) > max) e.state = "out";
         if (this.pointer.down && dist(this.pointer.x, this.pointer.y, e.x, e.y) < Math.max(30, e.r * 1.9)) {
-          this.rainbowBurst(e.x, e.y, 14); playSoftChime();
+          this.rainbowBurst(e.x, e.y, 14); playScore("phoenix");
           this.score += 1; this.onScore?.(this.score);
           m.timer = 1.1;
           if (this.score % 5 === 0) {
+            playRainbowArp();
             // Every fifth catch: a soft rainbow shower drifts down from the bridge.
             for (let s = 0; s < 22; s++) {
               this.particles.push({

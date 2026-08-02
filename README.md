@@ -58,7 +58,7 @@ Soft motion · non-scary · high-contrast targets · stylus & paw friendly · sh
 - **Energy:** Calm · Playful · Zoomies  
 - **Target size:** Small · Medium · Large  
 - **Movement:** Auto roam (hands-free) · Follow stylus · Mixed  
-- **Soft sounds:** Off by default (optional gentle chimes)  
+- **Soft sounds:** On by default — every game has its own tiny voice (bloops, twinkles, squeaks, chimes), all slow-attack, low-volume, and mid-pitched so nothing ever startles. One tap to mute  
 - Controls auto-hide so kittens focus on the toy, not the UI  
 
 ## Play it

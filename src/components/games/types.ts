@@ -242,7 +242,7 @@ export const DEFAULT_SETTINGS: GameSettings = {
   speed: "playful",
   size: "medium",
   control: "mixed",
-  sound: false,
+  sound: true,
   softGlow: true,
 };
 
