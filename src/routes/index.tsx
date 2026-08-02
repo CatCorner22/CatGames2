@@ -34,7 +34,8 @@ export const Route = createFileRoute("/")({
 
 type View = "hub" | "play" | "settings" | "about";
 
-const STORAGE_KEY = "kittenplay-settings-v1";
+const STORAGE_KEY = "kittenplay-settings-v2";
+const LEGACY_STORAGE_KEY = "kittenplay-settings-v1";
 
 const SERIES_SECTIONS: { key: GameSeries; title: string; sub: string }[] = [
   {
@@ -63,8 +64,16 @@ function loadSettings(): GameSettings {
   if (typeof window === "undefined") return DEFAULT_SETTINGS;
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return DEFAULT_SETTINGS;
-    return { ...DEFAULT_SETTINGS, ...JSON.parse(raw) };
+    if (raw) return { ...DEFAULT_SETTINGS, ...JSON.parse(raw) };
+    // One-time migration from v1: keep speed/size/control preferences but adopt
+    // the new sound-on default (v1 pre-dated the per-game sound palette).
+    const legacy = localStorage.getItem(LEGACY_STORAGE_KEY);
+    if (legacy) {
+      const old = JSON.parse(legacy) as Partial<GameSettings>;
+      delete old.sound;
+      return { ...DEFAULT_SETTINGS, ...old };
+    }
+    return DEFAULT_SETTINGS;
   } catch {
     return DEFAULT_SETTINGS;
   }
